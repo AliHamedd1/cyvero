@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background-color: #050816;
+  background-image:
+    radial-gradient(circle at top, rgba(76, 201, 240, 0.12), transparent 28%),
+    radial-gradient(circle at 85% 10%, rgba(126, 231, 255, 0.08), transparent 20%),
+    linear-gradient(rgba(126, 231, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(126, 231, 255, 0.05) 1px, transparent 1px);
+  background-size: auto, auto, 48px 48px, 48px 48px;
+  color: #eff7ff;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(76, 201, 240, 0.06), transparent 28%),
+    linear-gradient(180deg, rgba(5, 8, 22, 0.14) 0%, rgba(5, 8, 22, 0.82) 100%);
+  z-index: -1;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(126, 231, 255, 0.35) rgba(11, 19, 39, 0.55);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(11, 19, 39, 0.55);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(126, 231, 255, 0.3);
+  border-radius: 999px;
+}
+
+::selection {
+  background: rgba(76, 201, 240, 0.24);
+  color: #f7fbff;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  @apply transition duration-200;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  @apply outline-none ring-2 ring-cyanGlow/40 ring-offset-2 ring-offset-midnight;
+}
+
+.skip-link {
+  @apply sr-only focus:not-sr-only focus:absolute focus:right-4 focus:top-4 focus:z-[100] focus:rounded-2xl focus:bg-cyanGlow focus:px-4 focus:py-3 focus:text-sm focus:font-bold focus:text-slate-950;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.panel {
+  @apply rounded-[1.9rem] border border-white/10 bg-panel/70 shadow-panel backdrop-blur-xl;
+}
+
+.panel-soft {
+  @apply rounded-[1.75rem] border border-white/10 bg-panelSoft/65 backdrop-blur-xl;
+}
+
+.cyber-link {
+  @apply text-cyanGlow transition hover:text-white;
+}
+
+.eyebrow {
+  @apply inline-flex rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-3 py-1 text-xs font-semibold tracking-[0.16em] text-cyanGlow;
+}
+
+.cyber-card {
+  @apply relative overflow-hidden;
+}
+
+.cyber-card::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background:
+    linear-gradient(135deg, rgba(126, 231, 255, 0.07), transparent 38%, rgba(255,255,255,0.03));
+  pointer-events: none;
+}
