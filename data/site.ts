@@ -12,6 +12,7 @@ export const navigationLinks: NavigationLink[] = [
   { label: "الرئيسية", href: "/" },
   { label: "التصنيفات", href: "/categories" },
   { label: "التهديدات", href: "/threats" },
+  { label: "الاشتراكات", href: "/subscriptions" },
   { label: "حلّل حالتي", href: "/analyze" },
   { label: "اطلب مختص", href: "/request-expert" },
   { label: "من نحن", href: "/about" },

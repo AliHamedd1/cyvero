@@ -80,3 +80,12 @@ export interface AnalysisResult {
   firstSteps: string[];
   recommendations: string[];
 }
+
+export type CompanyType =
+  | "small"
+  | "medium"
+  | "large"
+  | "education"
+  | "technology"
+  | "government"
+  | "other";

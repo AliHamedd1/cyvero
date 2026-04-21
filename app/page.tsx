@@ -5,6 +5,7 @@ import { CTASection } from "@/components/cta-section";
 import { HeroSection } from "@/components/hero-section";
 import { SectionHeading } from "@/components/section-heading";
 import { StatsStrip } from "@/components/stats-strip";
+import { TestimonialsSection } from "@/components/testimonials-section";
 import { ThreatCard } from "@/components/threat-card";
 import { getAllCategories, getAllThreats, getFeaturedThreats, getHomeStats } from "@/lib/data";
 
@@ -30,7 +31,7 @@ export default function HomePage() {
         <SectionHeading
           eyebrow="التصنيفات الرئيسية"
           title="مكتبة عربية منظمة لخرائط التهديدات السيبرانية"
-          description="تتوزع موسوعة Cyvero على عشرة تصنيفات تغطي الشبكات، الفدية، الحسابات، الويب، البيانات، البريد، والجوال، مع صفحات تفصيلية لكل تهديد وفلاتر قابلة للتوسعة."
+          description="تتوزع موسوعة Cyvero على عشرة تصنيفات تغطي الشبكات، الفدية، الحسابات، الويب، البيانات، البريد، والجوال، مع صفحات تفصيلية لكل تهديد وفلاتر قابلة للتوسع."
         />
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {categories.map((category) => (
@@ -82,8 +83,7 @@ export default function HomePage() {
               <span className="text-sm font-semibold">سياسة المحتوى</span>
             </div>
             <p className="mt-4 leading-8 text-steel">
-              Cyvero لا يعرض أوامر هجومية أو أدوات استغلال أو خطوات اختراق. كل الصفحات مصممة
-              لتقديم فهم دفاعي، احتواء آمن، واستجابة أولية مسؤولة.
+              Cyvero لا يعرض أوامر هجومية أو أدوات استغلال أو خطوات اختراق. كل الصفحات مصممة لتقديم فهم دفاعي، احتواء آمن، واستجابة أولية مسؤولة.
             </p>
           </div>
           <div className="panel-soft p-6">
@@ -92,8 +92,7 @@ export default function HomePage() {
               <span className="text-sm font-semibold">جاهزية مستقبلية</span>
             </div>
             <p className="mt-4 leading-8 text-steel">
-              البنية الحالية تفصل البيانات، الأنواع، المكونات، والأدوات المساعدة، ما يسهل إضافة
-              لوحة تحكم، API للذكاء الاصطناعي، قاعدة بيانات، أو محتوى تحريري لاحقًا.
+              البنية الحالية تفصل البيانات، الأنواع، المكونات، والأدوات المساعدة، ما يسهل إضافة لوحة تحكم، API للذكاء الاصطناعي، قاعدة بيانات، أو محتوى تحريري لاحقًا.
             </p>
           </div>
           <div className="panel-soft p-6">
@@ -102,12 +101,13 @@ export default function HomePage() {
               <span className="text-sm font-semibold">مسار استخدام واضح</span>
             </div>
             <p className="mt-4 leading-8 text-steel">
-              ابدأ بالتصنيفات، اقرأ صفحة التهديد، استخدم تحليل الحالة الأولي عند الاشتباه، ثم صعّد
-              لمختص عند ظهور مؤشرات خطورة أعلى أو أثر تشغيلي واضح.
+              ابدأ بالتصنيفات، اقرأ صفحة التهديد، استخدم تحليل الحالة الأولي عند الاشتباه، ثم صعّد لمختص عند ظهور مؤشرات خطورة أعلى أو أثر تشغيلي واضح.
             </p>
           </div>
         </div>
       </section>
+
+      <TestimonialsSection />
 
       <section className="space-y-8">
         <SectionHeading
