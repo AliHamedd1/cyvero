@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { BadgeCheck, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 
@@ -56,30 +55,6 @@ export function SpecialistsDirectory() {
 
   return (
     <div className="space-y-8">
-      <section className="panel cyber-card overflow-hidden p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-4 py-2 text-sm text-cyanGlow">
-              <ShieldCheck className="size-4" />
-              بوابة المختصين
-            </div>
-            <h3 className="font-heading text-3xl text-white">تسجيل دخول المختصين</h3>
-            <p className="max-w-3xl leading-8 text-steel">
-              يتم الدخول إلى لوحة الإدارة الخاصة بعرض الطلبات والبلاغات عبر بوابة الأدمن في هذه النسخة
-              التجريبية، ولا يوجد مسار دخول مستقل للمختصين حاليًا.
-            </p>
-          </div>
-
-          <Link
-            href="/admin-login"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white"
-          >
-            دخول لوحة الأدمن
-            <Sparkles className="size-4" />
-          </Link>
-        </div>
-      </section>
-
       {selectedSpecialist ? (
         <div className="panel cyber-card overflow-hidden p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

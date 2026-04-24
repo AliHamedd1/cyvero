@@ -16,6 +16,20 @@ export const navigationLinks: NavigationLink[] = [
   { label: "حلّل حالتي", href: "/analyze" },
   { label: "المختصون", href: "/specialists" },
   { label: "اطلب مختص", href: "/request-expert" },
+  { label: "الأدمن", href: "/admin-login" },
+];
+
+export const footerPlatformLinks: NavigationLink[] = [
+  { label: "الرئيسية", href: "/" },
+  { label: "التصنيفات", href: "/categories" },
+  { label: "التهديدات", href: "/threats" },
+  { label: "الاشتراكات", href: "/subscriptions" },
+  { label: "حلّل حالتي", href: "/analyze" },
+  { label: "المختصون", href: "/specialists" },
+  { label: "اطلب مختص", href: "/request-expert" },
+];
+
+export const companyLinks: NavigationLink[] = [
   { label: "من نحن", href: "/about" },
   { label: "تواصل معنا", href: "/contact" },
 ];
@@ -35,7 +49,11 @@ export const legalLinks: NavigationLink[] = [
 export const footerLinkGroups: FooterLinkGroup[] = [
   {
     title: "المنصة",
-    links: navigationLinks,
+    links: footerPlatformLinks,
+  },
+  {
+    title: "Cyvero",
+    links: companyLinks,
   },
   {
     title: "قانوني",
