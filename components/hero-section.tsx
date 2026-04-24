@@ -13,10 +13,16 @@ export function HeroSection() {
       <div className="relative grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div className="space-y-7">
           <BrandMark showSubtitle />
-          <span className="eyebrow inline-flex items-center gap-2">
-            <ShieldCheck className="size-4" />
-            Cyvero منصة دفاعية وتوعوية فقط
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="eyebrow inline-flex items-center gap-2">
+              <ShieldCheck className="size-4" />
+              Cyvero منصة دفاعية وتوعوية فقط
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-cyanGlow/20 bg-white/5 px-4 py-2 text-xs font-semibold tracking-[0.16em] text-white">
+              <Sparkles className="size-3.5 text-cyanGlow" />
+              التحديث 1.6
+            </span>
+          </div>
           <div className="space-y-5">
             <h1 className="font-heading text-4xl leading-tight text-white md:text-6xl md:leading-[1.08]">
               هوية عربية واثقة

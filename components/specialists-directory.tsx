@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { specialists } from "@/data/specialists";
 import { createPrototypeReference, getInitials, isValidEmail } from "@/lib/prototype";
@@ -41,6 +41,8 @@ function isValidPhone(value: string) {
 }
 
 export function SpecialistsDirectory() {
+  const requestSectionRef = useRef<HTMLElement | null>(null);
+  const firstFieldRef = useRef<HTMLInputElement | null>(null);
   const [search, setSearch] = useState("");
   const [specialtyFilter, setSpecialtyFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -58,6 +60,23 @@ export function SpecialistsDirectory() {
   const selectedSpecialist = specialists.find((specialist) => specialist.id === selectedId) ?? null;
   const unclassifiedSpecialists = specialists.filter((specialist) => specialist.supportsUnclassified);
   const normalizedSearch = normalizeArabicText(search);
+
+  useEffect(() => {
+    if (!selectedId) {
+      return;
+    }
+
+    requestSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+
+    const timeoutId = window.setTimeout(() => {
+      firstFieldRef.current?.focus();
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [selectedId]);
 
   function setRequestField(field: keyof SpecialistRequestForm, value: string) {
     setRequestForm((current) => ({ ...current, [field]: value }));
@@ -153,7 +172,7 @@ export function SpecialistsDirectory() {
   return (
     <div className="space-y-8">
       {selectedSpecialist ? (
-        <section className="panel cyber-card overflow-hidden p-6 md:p-8">
+        <section ref={requestSectionRef} className="panel cyber-card overflow-hidden p-6 md:p-8">
           <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
             <div className="space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-4 py-2 text-sm text-cyanGlow">
@@ -175,6 +194,11 @@ export function SpecialistsDirectory() {
               <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5 text-sm leading-7 text-steel">
                 سيتم توجيه بيانات العميل والمشكلة مباشرة إلى هذا المختص داخل النسخة التجريبية الحالية
                 على شكل رسالة واجهية فقط، بدون Backend حقيقي.
+              </div>
+
+              <div className="rounded-[1.5rem] border border-cyanGlow/15 bg-cyanGlow/10 p-5 text-sm leading-7 text-steel">
+                بعد الضغط على زر طلب المختص يتم فتح هذا النموذج تلقائيًا في أعلى الصفحة حتى يكمل
+                العميل بياناته ويرسل المشكلة مباشرة إلى المختص المختار.
               </div>
 
               <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
@@ -226,6 +250,7 @@ export function SpecialistsDirectory() {
                 <label className="grid gap-2 text-sm text-steel">
                   الاسم
                   <input
+                    ref={firstFieldRef}
                     value={requestForm.clientName}
                     onChange={(event) => setRequestField("clientName", event.target.value)}
                     className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
