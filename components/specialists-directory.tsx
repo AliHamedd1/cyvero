@@ -1,10 +1,19 @@
 "use client";
 
-import { BadgeCheck, Search, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  BadgeCheck,
+  CheckCircle2,
+  Mail,
+  MessageSquareText,
+  Phone,
+  Search,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { useState } from "react";
 
 import { specialists } from "@/data/specialists";
-import { getInitials } from "@/lib/prototype";
+import { createPrototypeReference, getInitials, isValidEmail } from "@/lib/prototype";
 import { normalizeArabicText } from "@/lib/utils";
 
 const specialtyOptions = [
@@ -16,15 +25,103 @@ const specialtyOptions = [
   { value: "unclassified", label: "الحالات غير المصنفة" },
 ];
 
+const emptyRequestForm = {
+  clientName: "",
+  email: "",
+  phone: "",
+  issueTitle: "",
+  issueDetails: "",
+};
+
+type SpecialistRequestForm = typeof emptyRequestForm;
+type SpecialistRequestErrors = Partial<Record<keyof SpecialistRequestForm, string>>;
+
+function isValidPhone(value: string) {
+  return /^\+?[0-9\s-]{8,16}$/.test(value.trim());
+}
+
 export function SpecialistsDirectory() {
   const [search, setSearch] = useState("");
   const [specialtyFilter, setSpecialtyFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(specialists[0]?.id ?? null);
+  const [requestForm, setRequestForm] = useState<SpecialistRequestForm>(emptyRequestForm);
+  const [requestErrors, setRequestErrors] = useState<SpecialistRequestErrors>({});
+  const [submittedRequest, setSubmittedRequest] = useState<null | {
+    reference: string;
+    specialistName: string;
+    clientName: string;
+    issueTitle: string;
+    issueDetails: string;
+  }>(null);
 
   const selectedSpecialist = specialists.find((specialist) => specialist.id === selectedId) ?? null;
   const unclassifiedSpecialists = specialists.filter((specialist) => specialist.supportsUnclassified);
   const normalizedSearch = normalizeArabicText(search);
+
+  function setRequestField(field: keyof SpecialistRequestForm, value: string) {
+    setRequestForm((current) => ({ ...current, [field]: value }));
+    setRequestErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  function selectSpecialist(specialistId: string) {
+    setSelectedId(specialistId);
+    setRequestErrors({});
+    setSubmittedRequest(null);
+    setRequestForm(emptyRequestForm);
+  }
+
+  function validateRequestForm() {
+    const nextErrors: SpecialistRequestErrors = {};
+
+    if (requestForm.clientName.trim().length < 4) {
+      nextErrors.clientName = "يرجى إدخال الاسم بشكل واضح.";
+    }
+
+    if (!isValidEmail(requestForm.email.trim())) {
+      nextErrors.email = "يرجى إدخال بريد إلكتروني صالح.";
+    }
+
+    if (!isValidPhone(requestForm.phone)) {
+      nextErrors.phone = "يرجى إدخال رقم جوال صالح.";
+    }
+
+    if (requestForm.issueTitle.trim().length < 4) {
+      nextErrors.issueTitle = "يرجى كتابة عنوان مختصر للمشكلة.";
+    }
+
+    if (requestForm.issueDetails.trim().length < 15) {
+      nextErrors.issueDetails = "يرجى شرح المشكلة بتفصيل أكبر قليلًا.";
+    }
+
+    return nextErrors;
+  }
+
+  function submitRequest(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedSpecialist) {
+      return;
+    }
+
+    const nextErrors = validateRequestForm();
+
+    if (Object.keys(nextErrors).length > 0) {
+      setRequestErrors(nextErrors);
+      setSubmittedRequest(null);
+      return;
+    }
+
+    setRequestErrors({});
+    setSubmittedRequest({
+      reference: createPrototypeReference("SPC"),
+      specialistName: selectedSpecialist.name,
+      clientName: requestForm.clientName.trim(),
+      issueTitle: requestForm.issueTitle.trim(),
+      issueDetails: requestForm.issueDetails.trim(),
+    });
+    setRequestForm(emptyRequestForm);
+  }
 
   const filteredSpecialists = specialists.filter((specialist) => {
     const matchesSpecialty =
@@ -56,24 +153,166 @@ export function SpecialistsDirectory() {
   return (
     <div className="space-y-8">
       {selectedSpecialist ? (
-        <div className="panel cyber-card overflow-hidden p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
+        <section className="panel cyber-card overflow-hidden p-6 md:p-8">
+          <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+            <div className="space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-4 py-2 text-sm text-cyanGlow">
                 <BadgeCheck className="size-4" />
                 تم اختيار المختص
               </div>
-              <h3 className="mt-4 font-heading text-3xl text-white">{selectedSpecialist.name}</h3>
-              <p className="mt-2 text-steel">
-                {selectedSpecialist.primarySpecialty} · {selectedSpecialist.experienceLevel}
-              </p>
+
+              <div className="flex items-center gap-4">
+                <div className="flex size-20 items-center justify-center rounded-[1.5rem] border border-cyanGlow/20 bg-gradient-to-br from-cyanGlow/20 via-cyanGlow/10 to-white/5 font-heading text-2xl text-white">
+                  {getInitials(selectedSpecialist.name)}
+                </div>
+                <div>
+                  <h3 className="font-heading text-3xl text-white">{selectedSpecialist.name}</h3>
+                  <p className="mt-1 text-sm font-semibold text-cyanGlow">{selectedSpecialist.primarySpecialty}</p>
+                  <p className="mt-1 text-sm text-steel">{selectedSpecialist.experienceLevel}</p>
+                </div>
+              </div>
+
+              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5 text-sm leading-7 text-steel">
+                سيتم توجيه بيانات العميل والمشكلة مباشرة إلى هذا المختص داخل النسخة التجريبية الحالية
+                على شكل رسالة واجهية فقط، بدون Backend حقيقي.
+              </div>
+
+              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+                <p className="text-xs tracking-[0.14em] text-steel">المشكلات التي يتعامل معها المختص</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {selectedSpecialist.handles.map((item) => (
+                    <span
+                      key={item}
+                      className="rounded-full border border-cyanGlow/15 bg-midnight/60 px-3 py-1 text-xs text-cyanGlow"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-4 text-sm leading-7 text-steel">{selectedSpecialist.availability}</p>
+              </div>
+
+              {submittedRequest ? (
+                <div className="rounded-[1.6rem] border border-success/30 bg-success/10 p-5" aria-live="polite">
+                  <div className="flex items-center gap-3 text-success">
+                    <CheckCircle2 className="size-5" />
+                    <span className="text-sm font-semibold">تم إرسال الرسالة إلى المختص بنجاح</span>
+                  </div>
+                  <p className="mt-4 text-sm leading-7 text-slate-100">
+                    وصل طلب <span className="font-semibold text-white">{submittedRequest.clientName}</span> إلى
+                    المختص <span className="font-semibold text-white">{submittedRequest.specialistName}</span>.
+                  </p>
+                  <div className="mt-4 rounded-[1.35rem] border border-white/10 bg-midnight/55 p-4">
+                    <p className="text-xs tracking-[0.16em] text-steel">مرجع الطلب</p>
+                    <p className="mt-2 font-heading text-3xl text-white">{submittedRequest.reference}</p>
+                    <p className="mt-4 text-xs tracking-[0.16em] text-steel">الرسالة المرسلة إلى المختص</p>
+                    <p className="mt-2 text-sm font-semibold text-white">{submittedRequest.issueTitle}</p>
+                    <p className="mt-2 text-sm leading-7 text-steel">{submittedRequest.issueDetails}</p>
+                  </div>
+                </div>
+              ) : null}
             </div>
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 px-5 py-4 text-sm leading-7 text-steel">
-              تم تسجيل اختيارك بشكل أولي داخل الواجهة. يمكنك متابعة استعراض التفاصيل أو استخدام صفحة
-              طلب المختص لاحقًا عند توسيع التدفق.
-            </div>
+
+            <form onSubmit={submitRequest} className="space-y-5">
+              <div className="space-y-3">
+                <h3 className="font-heading text-3xl text-white">اطلب هذا المختص الآن</h3>
+                <p className="leading-8 text-steel">
+                  أدخل معلوماتك ووصف المشكلة، وسيتم إنشاء رسالة تجريبية تُرسل إلى المختص المختار داخل
+                  الواجهة.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="grid gap-2 text-sm text-steel">
+                  الاسم
+                  <input
+                    value={requestForm.clientName}
+                    onChange={(event) => setRequestField("clientName", event.target.value)}
+                    className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                    placeholder="الاسم الكامل"
+                  />
+                  {requestErrors.clientName ? (
+                    <span className="text-xs text-danger">{requestErrors.clientName}</span>
+                  ) : null}
+                </label>
+
+                <label className="grid gap-2 text-sm text-steel">
+                  البريد الإلكتروني
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-cyanGlow" />
+                    <input
+                      type="email"
+                      value={requestForm.email}
+                      onChange={(event) => setRequestField("email", event.target.value)}
+                      className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 py-3.5 pl-4 pr-11 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                      placeholder="name@example.com"
+                      dir="ltr"
+                    />
+                  </div>
+                  {requestErrors.email ? <span className="text-xs text-danger">{requestErrors.email}</span> : null}
+                </label>
+
+                <label className="grid gap-2 text-sm text-steel md:col-span-2">
+                  رقم الجوال
+                  <div className="relative">
+                    <Phone className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-cyanGlow" />
+                    <input
+                      value={requestForm.phone}
+                      onChange={(event) => setRequestField("phone", event.target.value)}
+                      className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 py-3.5 pl-4 pr-11 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                      placeholder="+9665XXXXXXXX"
+                      dir="ltr"
+                    />
+                  </div>
+                  {requestErrors.phone ? <span className="text-xs text-danger">{requestErrors.phone}</span> : null}
+                </label>
+
+                <label className="grid gap-2 text-sm text-steel md:col-span-2">
+                  عنوان المشكلة
+                  <div className="relative">
+                    <MessageSquareText className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-cyanGlow" />
+                    <input
+                      value={requestForm.issueTitle}
+                      onChange={(event) => setRequestField("issueTitle", event.target.value)}
+                      className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 py-3.5 pl-4 pr-11 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                      placeholder="مثال: اشتباه باختراق بريد العمل"
+                    />
+                  </div>
+                  {requestErrors.issueTitle ? (
+                    <span className="text-xs text-danger">{requestErrors.issueTitle}</span>
+                  ) : null}
+                </label>
+              </div>
+
+              <label className="grid gap-2 text-sm text-steel">
+                وصف المشكلة
+                <textarea
+                  value={requestForm.issueDetails}
+                  onChange={(event) => setRequestField("issueDetails", event.target.value)}
+                  rows={7}
+                  className="w-full rounded-[1.5rem] border border-white/10 bg-white/5 px-4 py-4 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                  placeholder="اشرح للمختص ما الذي حدث، متى بدأ، وما هي المؤشرات أو الأعراض التي لاحظتها."
+                />
+                {requestErrors.issueDetails ? (
+                  <span className="text-xs text-danger">{requestErrors.issueDetails}</span>
+                ) : null}
+              </label>
+
+              <div className="rounded-[1.5rem] border border-cyanGlow/15 bg-cyanGlow/10 p-5 text-sm leading-7 text-steel">
+                هذا التدفق تجريبي داخل Frontend فقط. بعد الإرسال ستظهر رسالة تؤكد أن الطلب وصل إلى
+                المختص المختار داخل الواجهة، بدون إرسال حقيقي إلى خادم في هذه المرحلة.
+              </div>
+
+              <button
+                type="submit"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white"
+              >
+                إرسال الطلب إلى المختص
+                <Sparkles className="size-4" />
+              </button>
+            </form>
           </div>
-        </div>
+        </section>
       ) : null}
 
       <section className="grid gap-4 lg:grid-cols-3">
@@ -208,10 +447,10 @@ export function SpecialistsDirectory() {
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <button
                     type="button"
-                    onClick={() => setSelectedId(specialist.id)}
+                    onClick={() => selectSpecialist(specialist.id)}
                     className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white"
                   >
-                    اختيار المختص
+                    اطلب المختص
                     <Sparkles className="size-4" />
                   </button>
                   <button
