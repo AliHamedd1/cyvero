@@ -89,3 +89,36 @@ export type CompanyType =
   | "technology"
   | "government"
   | "other";
+
+export interface BusinessQuoteSummary {
+  companyType: CompanyType;
+  computerCount: number;
+  serverCount: number;
+  estimatedPrice: number;
+}
+
+export type IncidentStatus = "open" | "investigating" | "contained" | "closed";
+
+export interface AdminIncident {
+  id: string;
+  type: string;
+  category: string;
+  severity: Severity;
+  organization: string;
+  affectedSystem: string;
+  status: IncidentStatus;
+  reportedAt: string;
+  summary: string;
+}
+
+export interface SpecialistProfile {
+  id: string;
+  name: string;
+  primarySpecialty: string;
+  subSpecialties: string[];
+  description: string;
+  experienceLevel: string;
+  handles: string[];
+  availability: string;
+  supportsUnclassified?: boolean;
+}

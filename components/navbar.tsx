@@ -24,7 +24,10 @@ export function Navbar() {
 
         <nav className="hidden items-center gap-2 xl:flex" aria-label="التنقل الرئيسي">
           {navigationLinks.map((link) => {
-            const active = pathname === link.href;
+            const active =
+              link.href === "/"
+                ? pathname === link.href
+                : pathname === link.href || pathname.startsWith(`${link.href}/`);
             return (
               <Link
                 key={link.href}
@@ -86,7 +89,9 @@ export function Navbar() {
                 onClick={() => setOpen(false)}
                 className={cn(
                   "rounded-2xl px-4 py-3 text-sm transition",
-                  pathname === link.href
+                  (link.href === "/"
+                    ? pathname === link.href
+                    : pathname === link.href || pathname.startsWith(`${link.href}/`))
                     ? "bg-cyanGlow/10 text-cyanGlow"
                     : "bg-white/5 text-steel hover:text-white",
                 )}
