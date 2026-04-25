@@ -59,6 +59,7 @@ export interface Threat {
 export interface NavigationLink {
   label: string;
   href: string;
+  matchMode?: "exact" | "prefix";
 }
 
 export interface FooterLinkGroup {
@@ -121,4 +122,83 @@ export interface SpecialistProfile {
   handles: string[];
   availability: string;
   supportsUnclassified?: boolean;
+}
+
+export interface RatingReview {
+  id: string;
+  name: string;
+  role: string;
+  category: string;
+  rating: number;
+  comment: string;
+  submittedAt: string;
+}
+
+export interface SpecialistAccount {
+  specialistId: string;
+  specialistName: string;
+  username: string;
+  password: string;
+}
+
+export interface SpecialistSession {
+  specialistId: string;
+  specialistName: string;
+  username: string;
+  loggedInAt: string;
+}
+
+export type SpecialistConversationStatus =
+  | "pending"
+  | "active"
+  | "awaiting-client"
+  | "closed";
+
+export type SpecialistConversationUrgency = "routine" | "priority" | "critical";
+
+export type SpecialistMessageSender = "client" | "specialist" | "system";
+
+export interface SpecialistConversationClient {
+  name: string;
+  email: string;
+  phone: string;
+  organization: string;
+  role: string;
+  city: string;
+}
+
+export interface SpecialistConversationMessage {
+  id: string;
+  sender: SpecialistMessageSender;
+  senderName: string;
+  body: string;
+  sentAt: string;
+}
+
+export interface SpecialistConversation {
+  id: string;
+  reference: string;
+  specialistId: string;
+  specialistName: string;
+  status: SpecialistConversationStatus;
+  urgency: SpecialistConversationUrgency;
+  issueTitle: string;
+  issueDetails: string;
+  createdAt: string;
+  updatedAt: string;
+  verificationNote: string;
+  client: SpecialistConversationClient;
+  messages: SpecialistConversationMessage[];
+}
+
+export interface SpecialistRating {
+  id: string;
+  specialistId: string;
+  specialistName: string;
+  clientName: string;
+  reference: string;
+  serviceArea: string;
+  rating: number;
+  comment: string;
+  submittedAt: string;
 }

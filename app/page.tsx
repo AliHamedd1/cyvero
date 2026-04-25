@@ -1,4 +1,5 @@
-import { ShieldCheck, Sparkles, Waypoints } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpLeft, CheckCircle2, ShieldCheck, Sparkles, Waypoints } from "lucide-react";
 
 import { CategoryCard } from "@/components/category-card";
 import { CTASection } from "@/components/cta-section";
@@ -7,6 +8,7 @@ import { SectionHeading } from "@/components/section-heading";
 import { StatsStrip } from "@/components/stats-strip";
 import { TestimonialsSection } from "@/components/testimonials-section";
 import { ThreatCard } from "@/components/threat-card";
+import { whyCyveroHighlights } from "@/data/why-cyvero";
 import { getAllCategories, getAllThreats, getFeaturedThreats, getHomeStats } from "@/lib/data";
 
 const platformBenefits = [
@@ -29,6 +31,47 @@ export default function HomePage() {
 
       <section className="space-y-8">
         <SectionHeading
+          eyebrow="لماذا Cyvero؟"
+          title="منتج يربط بين المعرفة السيبرانية والتنفيذ الفعلي"
+          description="Cyvero لا يكتفي بشرح المخاطر، بل يبني رحلة استخدام واضحة تجيب على: ما الذي يميز المشروع؟ ولماذا ليس مجرد AI فقط؟ وما القيمة التي يضيفها فعلًا؟"
+        />
+        <div className="grid gap-5 xl:grid-cols-3">
+          {whyCyveroHighlights.map((item) => (
+            <article key={item.title} className="panel cyber-card overflow-hidden p-6">
+              <h2 className="font-heading text-3xl text-white">{item.title}</h2>
+              <p className="mt-4 leading-8 text-steel">{item.description}</p>
+              <div className="mt-5 grid gap-3">
+                {item.points.map((point) => (
+                  <div
+                    key={point}
+                    className="flex items-start gap-3 rounded-[1.25rem] border border-white/10 bg-white/5 px-4 py-4 text-sm leading-7 text-slate-100"
+                  >
+                    <div className="mt-1 rounded-full border border-cyanGlow/20 bg-cyanGlow/10 p-1 text-cyanGlow">
+                      <CheckCircle2 className="size-3.5" />
+                    </div>
+                    <p>{point}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="flex justify-center">
+          <Link
+            href="/why-cyvero"
+            className="inline-flex items-center gap-2 rounded-2xl border border-cyanGlow/25 bg-cyanGlow/10 px-6 py-4 text-sm font-semibold text-white transition hover:bg-cyanGlow/15"
+          >
+            اكتشف لماذا Cyvero؟
+            <ArrowUpLeft className="size-4" />
+          </Link>
+        </div>
+      </section>
+
+      <TestimonialsSection />
+
+      <section className="space-y-8">
+        <SectionHeading
           eyebrow="التصنيفات الرئيسية"
           title="مكتبة عربية منظمة لخرائط التهديدات السيبرانية"
           description="تتوزع موسوعة Cyvero على عشرة تصنيفات تغطي الشبكات، الفدية، الحسابات، الويب، البيانات، البريد، والجوال، مع صفحات تفصيلية لكل تهديد وفلاتر قابلة للتوسع."
@@ -40,19 +83,6 @@ export default function HomePage() {
               category={category}
               threatCount={threats.filter((threat) => threat.categorySlug === category.slug).length}
             />
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-8">
-        <SectionHeading
-          eyebrow="تهديدات شائعة"
-          title="نقاط انطلاق سريعة لفهم المخاطر الأكثر تداولًا"
-          description="هذه مجموعة بداية تعرض أشهر السيناريوهات الدفاعية التي يبحث عنها المستخدمون والفرق عند الاشتباه بوجود نشاط غير طبيعي."
-        />
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {featuredThreats.map((threat) => (
-            <ThreatCard key={threat.slug} threat={threat} />
           ))}
         </div>
       </section>
@@ -107,7 +137,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      <TestimonialsSection />
+      <section className="space-y-8">
+        <SectionHeading
+          eyebrow="تهديدات شائعة"
+          title="نقاط انطلاق سريعة لفهم المخاطر الأكثر تداولًا"
+          description="هذه مجموعة بداية تعرض أشهر السيناريوهات الدفاعية التي يبحث عنها المستخدمون والفرق عند الاشتباه بوجود نشاط غير طبيعي."
+        />
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {featuredThreats.map((threat) => (
+            <ThreatCard key={threat.slug} threat={threat} />
+          ))}
+        </div>
+      </section>
 
       <section className="space-y-8">
         <SectionHeading

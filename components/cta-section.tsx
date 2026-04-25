@@ -21,8 +21,15 @@ export function CTASection({ title, description }: CTASectionProps) {
         </div>
         <div className="grid gap-3 md:justify-self-end">
           <Link
-            href="/categories"
+            href="/why-cyvero"
             className="inline-flex items-center justify-between rounded-2xl border border-cyanGlow/25 bg-cyanGlow/10 px-5 py-4 text-sm font-semibold text-white transition hover:bg-cyanGlow/15"
+          >
+            لماذا Cyvero؟
+            <ArrowUpLeft className="size-4" />
+          </Link>
+          <Link
+            href="/categories"
+            className="inline-flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
           >
             ابدأ بتصفح التهديدات
             <ArrowUpLeft className="size-4" />

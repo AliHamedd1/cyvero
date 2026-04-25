@@ -1,0 +1,46 @@
+[
+  {
+    "id": "a488c734-fd50-4ea5-b234-954093953ddf",
+    "reference": "SPC-2026-13I0",
+    "specialistId": "salem-network",
+    "specialistName": "سالم الشبكي",
+    "status": "closed",
+    "urgency": "priority",
+    "issueTitle": "اشتباه",
+    "issueDetails": "حسابي مخترق ويحتاج الى حماية",
+    "createdAt": "2026-04-25T20:51:21.854Z",
+    "updatedAt": "2026-04-25T20:52:55.905Z",
+    "verificationNote": "تم التحقق الأولي من تنسيق الاسم، البريد الإلكتروني، رقم الجوال، وحقول التعريف الأساسية داخل الواجهة.",
+    "client": {
+      "name": "علي علي علي",
+      "email": "ali@you.com",
+      "phone": "0559876542",
+      "organization": "فرد",
+      "role": "فرد",
+      "city": "جدة"
+    },
+    "messages": [
+      {
+        "id": "fa8815fb-94f4-4612-9867-ba32b0ea17c8",
+        "sender": "system",
+        "senderName": "Cyvero",
+        "body": "تم فتح قناة المراسلة مع المختص وإرسال الطلب إلى بوابته الداخلية بانتظار مراجعته.",
+        "sentAt": "2026-04-25T20:51:21.854Z"
+      },
+      {
+        "id": "2d98360c-8176-4839-a9f5-8608fd082e6b",
+        "sender": "client",
+        "senderName": "علي علي علي",
+        "body": "اشتباه\n\nحسابي مخترق ويحتاج الى حماية",
+        "sentAt": "2026-04-25T20:51:21.854Z"
+      },
+      {
+        "id": "3b429ea2-2d5b-4026-adac-7f32671faed4",
+        "sender": "specialist",
+        "senderName": "سالم الشبكي",
+        "body": "تم حل المشكلة حسابك كان فيه مشكلة اختراق بحت وتم التعامل معها",
+        "sentAt": "2026-04-25T20:52:13.393Z"
+      }
+    ]
+  }
+]

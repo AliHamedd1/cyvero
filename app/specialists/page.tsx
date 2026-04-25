@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { SearchCheck, ShieldCheck, UserRound } from "lucide-react";
+import { MessageSquareText, SearchCheck, ShieldCheck } from "lucide-react";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { SectionHeading } from "@/components/section-heading";
@@ -8,26 +8,26 @@ import { siteConfig } from "@/data/site";
 
 const specialistsNotes = [
   {
-    icon: UserRound,
-    title: "مختصون بتخصصات متعددة",
-    description: "يشمل الدليل شبكات، برمجيات خبيثة، بريد إلكتروني، استجابة للحوادث، أنظمة، وتهديدات ويب.",
+    icon: SearchCheck,
+    title: "اختيار وتنقل احترافي",
+    description: "يمكن للعميل التنقل بين المختصين، مقارنة التخصصات، وتصفية النتائج حسب المجال المناسب.",
   },
   {
-    icon: SearchCheck,
-    title: "بحث وفلاتر مباشرة",
-    description: "يمكن للعميل البحث باسم المختص أو التخصص، ثم تضييق النتائج حسب المجال المناسب.",
+    icon: MessageSquareText,
+    title: "طلب ومحادثة مباشرة",
+    description: "بعد التحقق الأولي من بيانات العميل يتم فتح قناة محادثة مع المختص وربطها بمرجع واضح.",
   },
   {
     icon: ShieldCheck,
-    title: "مسار للحالات غير المصنفة",
-    description: "تم تخصيص مختصين للحالات العامة عندما لا يعرف العميل نوع المشكلة أو يحتاج توجيهًا أوليًا.",
+    title: "بوابة للمختصين وتقييم موثّق",
+    description: "لكل مختص بوابة دخول تجريبية خاصة به، مع تقييمات مرتبطة بمراجع المحادثات بدل المراجعات العامة غير الموثقة.",
   },
 ];
 
 export const metadata: Metadata = {
   title: `المختصون | ${siteConfig.name}`,
   description:
-    "صفحة دليل المختصين في Cyvero مع بطاقات احترافية، تخصصات متعددة، وبحث وفلاتر للحالات المصنفة وغير المصنفة.",
+    "صفحة المختصين في Cyvero مع تنقل احترافي، تحقق أولي، محادثة مباشرة، تقييمات موثقة، وبوابة دخول للمختصين.",
 };
 
 export default function SpecialistsPage() {
@@ -40,8 +40,8 @@ export default function SpecialistsPage() {
           <div className="space-y-5">
             <SectionHeading
               eyebrow="دليل المختصين"
-              title="اختر المختص المناسب وفق نوع المشكلة أو اطلب توجيهًا أوليًا"
-              description="تعرض هذه الصفحة دليلًا احترافيًا لجميع المختصين المتاحين داخل Cyvero، مع بطاقات واضحة، تخصصات فرعية، وواجهة بحث وفلاتر متجاوبة بالكامل."
+              title="اختر المختص المناسب، افتح محادثة موثقة، وتابع الحالة حتى التقييم"
+              description="تعرض هذه الصفحة نظامًا متكاملًا للمختصين داخل Cyvero: اختيار المختص، التحقق الأولي من بيانات العميل، فتح قناة رسائل، ثم تقييم المختص على أساس مرجع المحادثة."
             />
           </div>
 

@@ -14,9 +14,10 @@ export const navigationLinks: NavigationLink[] = [
   { label: "التهديدات", href: "/threats" },
   { label: "الاشتراكات", href: "/subscriptions" },
   { label: "حلّل حالتي", href: "/analyze" },
-  { label: "المختصون", href: "/specialists" },
-  { label: "اطلب مختص", href: "/request-expert" },
-  { label: "الأدمن", href: "/admin-login" },
+  { label: "المختصون", href: "/specialists", matchMode: "exact" },
+  { label: "دخول المختصين", href: "/specialists/login", matchMode: "exact" },
+  { label: "اطلب مختص", href: "/request-expert", matchMode: "exact" },
+  { label: "الأدمن", href: "/admin-login", matchMode: "exact" },
 ];
 
 export const footerPlatformLinks: NavigationLink[] = [
@@ -26,11 +27,12 @@ export const footerPlatformLinks: NavigationLink[] = [
   { label: "الاشتراكات", href: "/subscriptions" },
   { label: "حلّل حالتي", href: "/analyze" },
   { label: "المختصون", href: "/specialists" },
+  { label: "دخول المختصين", href: "/specialists/login" },
   { label: "اطلب مختص", href: "/request-expert" },
 ];
 
 export const companyLinks: NavigationLink[] = [
-  { label: "من نحن", href: "/about" },
+  { label: "لماذا Cyvero؟", href: "/why-cyvero" },
   { label: "تواصل معنا", href: "/contact" },
 ];
 

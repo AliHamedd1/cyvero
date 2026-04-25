@@ -8,7 +8,20 @@ import { useId, useState } from "react";
 import { BrandMark } from "@/components/brand-mark";
 import { SearchBar } from "@/components/search-bar";
 import { navigationLinks } from "@/data/site";
+import { NavigationLink } from "@/types/cyber";
 import { cn } from "@/lib/utils";
+
+function isLinkActive(link: NavigationLink, pathname: string) {
+  if (link.href === "/") {
+    return pathname === "/";
+  }
+
+  if (link.matchMode === "exact") {
+    return pathname === link.href;
+  }
+
+  return pathname === link.href || pathname.startsWith(`${link.href}/`);
+}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -24,10 +37,7 @@ export function Navbar() {
 
         <nav className="hidden items-center gap-2 xl:flex" aria-label="التنقل الرئيسي">
           {navigationLinks.map((link) => {
-            const active =
-              link.href === "/"
-                ? pathname === link.href
-                : pathname === link.href || pathname.startsWith(`${link.href}/`);
+            const active = isLinkActive(link, pathname);
             return (
               <Link
                 key={link.href}
@@ -89,9 +99,7 @@ export function Navbar() {
                 onClick={() => setOpen(false)}
                 className={cn(
                   "rounded-2xl px-4 py-3 text-sm transition",
-                  (link.href === "/"
-                    ? pathname === link.href
-                    : pathname === link.href || pathname.startsWith(`${link.href}/`))
+                  isLinkActive(link, pathname)
                     ? "bg-cyanGlow/10 text-cyanGlow"
                     : "bg-white/5 text-steel hover:text-white",
                 )}
