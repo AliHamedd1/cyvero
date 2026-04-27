@@ -3,6 +3,7 @@ export const ADMIN_PASSWORD = "Admil123";
 export const ADMIN_SESSION_KEY = "cyvero-admin-session";
 export const SPECIALIST_SESSION_KEY = "cyvero-specialist-session";
 export const CLIENT_SPECIALIST_CONVERSATIONS_KEY = "cyvero-client-specialist-conversations";
+export const DEVICE_PREFERENCE_KEY = "cyvero-device-preference";
 
 export function createPrototypeReference(prefix: string) {
   const year = new Date().getFullYear();

@@ -2,6 +2,8 @@ export type Severity = "low" | "medium" | "high" | "critical";
 
 export type Audience = "individuals" | "businesses" | "both";
 
+export type DevicePreference = "mobile" | "desktop";
+
 export type CategorySlug =
   | "network-attacks"
   | "ransomware"

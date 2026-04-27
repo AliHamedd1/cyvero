@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useId, useState } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
+import { DeviceSwitcherButton } from "@/components/device-switcher-button";
 import { SearchBar } from "@/components/search-bar";
 import { navigationLinks } from "@/data/site";
 import { NavigationLink } from "@/types/cyber";
@@ -56,8 +57,11 @@ export function Navbar() {
           })}
         </nav>
 
-        <div className="hidden min-w-[330px] xl:block">
-          <SearchBar action="/threats" placeholder="ابحث عن تهديد أو تصنيف" compact />
+        <div className="hidden items-center gap-3 xl:flex">
+          <div className="min-w-[330px]">
+            <SearchBar action="/threats" placeholder="ابحث عن تهديد أو تصنيف" compact />
+          </div>
+          <DeviceSwitcherButton compact />
         </div>
 
         <div className="flex items-center gap-2 xl:hidden">
@@ -90,6 +94,7 @@ export function Navbar() {
       >
         <div className="container space-y-4 py-5">
           <SearchBar action="/threats" placeholder="ابحث عن تهديد أو تصنيف أو كلمة مفتاحية" />
+          <DeviceSwitcherButton fullWidth />
           <div className="grid gap-2" role="menu" aria-label="القائمة المحمولة">
             {navigationLinks.map((link) => (
               <Link

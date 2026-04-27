@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Changa, IBM_Plex_Sans_Arabic } from "next/font/google";
 
-import { Footer } from "@/components/footer";
-import { Navbar } from "@/components/navbar";
+import { AppChrome } from "@/components/app-chrome";
 import { siteConfig } from "@/data/site";
 import "./globals.css";
 
@@ -60,13 +59,7 @@ export default function RootLayout({
         <a href="#main-content" className="skip-link">
           الانتقال إلى المحتوى الرئيسي
         </a>
-        <div className="relative flex min-h-screen flex-col">
-          <Navbar />
-          <main id="main-content" className="flex-1">
-            <div className="container py-8 md:py-10">{children}</div>
-          </main>
-          <Footer />
-        </div>
+        <AppChrome>{children}</AppChrome>
       </body>
     </html>
   );
