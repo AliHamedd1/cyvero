@@ -19,7 +19,7 @@ export function DeviceSwitcherButton({
 
   function handleSwitch() {
     window.localStorage.removeItem(DEVICE_PREFERENCE_KEY);
-    router.push("/");
+    router.push("/gateway");
   }
 
   return (

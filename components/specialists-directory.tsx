@@ -1,23 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import {
   ArrowUpLeft,
   BadgeCheck,
   Building2,
-  CheckCircle2,
-  ClipboardCheck,
+  Clock3,
   LoaderCircle,
   Mail,
   MapPin,
   MessageSquareText,
   Phone,
   Search,
-  ShieldAlert,
   ShieldCheck,
   Sparkles,
   Star,
   UserCheck,
+  XCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -26,15 +24,16 @@ import {
   CLIENT_SPECIALIST_CONVERSATIONS_KEY,
   formatArabicDate,
   formatArabicDateTime,
-  getInitials,
   isValidEmail,
   isValidPhone,
 } from "@/lib/prototype";
 import { cn, normalizeArabicText } from "@/lib/utils";
 import {
+  SpecialistCancellationReason,
   SpecialistConversation,
   SpecialistConversationStatus,
   SpecialistConversationUrgency,
+  SpecialistProfile,
   SpecialistRating,
 } from "@/types/cyber";
 
@@ -44,7 +43,6 @@ const specialtyOptions = [
     value: specialty,
     label: specialty,
   })),
-  { value: "unclassified", label: "الحالات غير المصنفة" },
 ];
 
 const urgencyOptions: Array<{
@@ -52,9 +50,16 @@ const urgencyOptions: Array<{
   label: string;
   description: string;
 }> = [
-  { value: "routine", label: "اعتيادي", description: "حالة قابلة للمتابعة خلال وقت العمل." },
-  { value: "priority", label: "عالي", description: "الحالة تؤثر على التشغيل وتحتاج متابعة أسرع." },
-  { value: "critical", label: "حرج", description: "مؤشرات مرتفعة الخطورة أو توقف واضح للخدمة." },
+  { value: "routine", label: "اعتيادي", description: "مناسب للحالات العامة أو الاستشارية." },
+  { value: "priority", label: "عالي", description: "الحالة تؤثر على الاستخدام وتحتاج متابعة أسرع." },
+  { value: "critical", label: "حرج", description: "هناك أثر واضح أو خطر مرتفع ويتطلب انتباهًا فوريًا." },
+];
+
+const cancellationReasons: SpecialistCancellationReason[] = [
+  "السعر مرتفع",
+  "غير مناسب",
+  "تم الحل",
+  "سبب آخر",
 ];
 
 const conversationStatusMap: Record<
@@ -68,17 +73,25 @@ const conversationStatusMap: Record<
     label: "بانتظار المختص",
     className: "border-amber-400/30 bg-amber-400/10 text-amber-200",
   },
-  active: {
-    label: "نشطة",
+  quoted: {
+    label: "بانتظار قرار العميل",
     className: "border-cyanGlow/30 bg-cyanGlow/10 text-cyanGlow",
+  },
+  active: {
+    label: "نشط",
+    className: "border-emerald-400/30 bg-emerald-400/10 text-emerald-200",
   },
   "awaiting-client": {
     label: "بانتظار العميل",
     className: "border-violet-400/30 bg-violet-400/10 text-violet-200",
   },
   closed: {
-    label: "مغلقة",
+    label: "مكتمل",
     className: "border-emerald-400/30 bg-emerald-400/10 text-emerald-200",
+  },
+  cancelled: {
+    label: "ملغي",
+    className: "border-danger/30 bg-danger/10 text-rose-100",
   },
 };
 
@@ -130,6 +143,16 @@ function setConversationIndexValue(specialistId: string, conversationId: string)
   window.localStorage.setItem(CLIENT_SPECIALIST_CONVERSATIONS_KEY, JSON.stringify(current));
 }
 
+function clearConversationIndexValue(specialistId: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const current = getConversationIndex();
+  delete current[specialistId];
+  window.localStorage.setItem(CLIENT_SPECIALIST_CONVERSATIONS_KEY, JSON.stringify(current));
+}
+
 async function parseApiResponse<T extends { error?: string }>(response: Response) {
   const payload = (await response.json()) as T;
 
@@ -150,13 +173,19 @@ function buildRatingSummary(items: SpecialistRating[]) {
   };
 }
 
+function canOpenNewRequest(conversation: SpecialistConversation | null) {
+  if (!conversation) {
+    return true;
+  }
+
+  return ["closed", "cancelled"].includes(conversation.status);
+}
+
 export function SpecialistsDirectory() {
   const requestSectionRef = useRef<HTMLElement | null>(null);
-  const firstFieldRef = useRef<HTMLInputElement | null>(null);
   const [search, setSearch] = useState("");
   const [specialtyFilter, setSpecialtyFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string>(specialists[0]?.id ?? "");
-  const [expandedId, setExpandedId] = useState<string | null>(specialists[0]?.id ?? null);
   const [requestForm, setRequestForm] = useState<SpecialistRequestForm>(emptyRequestForm);
   const [requestErrors, setRequestErrors] = useState<SpecialistRequestErrors>({});
   const [requestSubmitting, setRequestSubmitting] = useState(false);
@@ -167,25 +196,24 @@ export function SpecialistsDirectory() {
   const [conversationLoading, setConversationLoading] = useState(false);
   const [conversationNotice, setConversationNotice] = useState("");
   const [conversationError, setConversationError] = useState("");
-  const [referenceLookup, setReferenceLookup] = useState("");
-  const [lookupLoading, setLookupLoading] = useState(false);
   const [messageDraft, setMessageDraft] = useState("");
   const [messageSubmitting, setMessageSubmitting] = useState(false);
+  const [quoteSubmitting, setQuoteSubmitting] = useState(false);
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [cancelReason, setCancelReason] = useState<SpecialistCancellationReason>("السعر مرتفع");
+  const [cancelOtherReason, setCancelOtherReason] = useState("");
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [ratingForm, setRatingForm] = useState<SpecialistRatingForm>(emptyRatingForm);
   const [ratingErrors, setRatingErrors] = useState<SpecialistRatingErrors>({});
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [ratingNotice, setRatingNotice] = useState("");
 
   const selectedSpecialist = specialists.find((specialist) => specialist.id === selectedId) ?? null;
-  const unclassifiedSpecialists = specialists.filter((specialist) => specialist.supportsUnclassified);
   const normalizedSearch = normalizeArabicText(search);
 
   const filteredSpecialists = useMemo(() => {
     return specialists.filter((specialist) => {
-      const matchesSpecialty =
-        specialtyFilter === "all" ||
-        specialist.primarySpecialty === specialtyFilter ||
-        (specialtyFilter === "unclassified" && specialist.supportsUnclassified);
+      const matchesSpecialty = specialtyFilter === "all" || specialist.primarySpecialty === specialtyFilter;
 
       if (!matchesSpecialty) {
         return false;
@@ -209,36 +237,15 @@ export function SpecialistsDirectory() {
     });
   }, [normalizedSearch, specialtyFilter]);
 
-  const ratingSummaryBySpecialist = useMemo(() => {
-    return specialists.reduce<Record<string, ReturnType<typeof buildRatingSummary>>>((collection, specialist) => {
-      collection[specialist.id] = buildRatingSummary(
-        ratings.filter((rating) => rating.specialistId === specialist.id),
-      );
-      return collection;
-    }, {});
-  }, [ratings]);
-
-  const selectedSpecialistRatings = useMemo(() => {
-    if (!selectedSpecialist) {
-      return [];
+  useEffect(() => {
+    if (!filteredSpecialists.length) {
+      return;
     }
 
-    return ratings.filter((rating) => rating.specialistId === selectedSpecialist.id);
-  }, [ratings, selectedSpecialist]);
-
-  const selectedSpecialistRatingSummary = buildRatingSummary(selectedSpecialistRatings);
-
-  const alreadyRatedCurrentConversation = useMemo(() => {
-    if (!activeConversation || !selectedSpecialist) {
-      return false;
+    if (!filteredSpecialists.some((specialist) => specialist.id === selectedId)) {
+      setSelectedId(filteredSpecialists[0].id);
     }
-
-    return ratings.some(
-      (rating) =>
-        rating.specialistId === selectedSpecialist.id &&
-        rating.reference.toUpperCase() === activeConversation.reference.toUpperCase(),
-    );
-  }, [activeConversation, ratings, selectedSpecialist]);
+  }, [filteredSpecialists, selectedId]);
 
   useEffect(() => {
     let active = true;
@@ -254,7 +261,7 @@ export function SpecialistsDirectory() {
         }
       } catch (error) {
         if (active) {
-          setRatingsError(error instanceof Error ? error.message : "تعذر تحميل تقييمات المختصين.");
+          setRatingsError(error instanceof Error ? error.message : "تعذر تحميل التقييمات.");
         }
       } finally {
         if (active) {
@@ -275,16 +282,17 @@ export function SpecialistsDirectory() {
       return;
     }
 
-    let active = true;
     const conversationId = getConversationIndex()[selectedId];
 
     if (!conversationId) {
       setActiveConversation(null);
-      setConversationError("");
       setConversationNotice("");
-      setReferenceLookup("");
+      setConversationError("");
+      setShowCancelForm(false);
       return;
     }
+
+    let active = true;
 
     async function restoreConversation() {
       setConversationLoading(true);
@@ -294,21 +302,17 @@ export function SpecialistsDirectory() {
           `/api/specialist-conversations?conversationId=${encodeURIComponent(conversationId)}`,
           { cache: "no-store" },
         );
-        const payload = await parseApiResponse<{
-          conversation: SpecialistConversation;
-          error?: string;
-        }>(response);
+        const payload = await parseApiResponse<{ conversation: SpecialistConversation; error?: string }>(response);
 
         if (active) {
           setActiveConversation(payload.conversation);
-          setReferenceLookup(payload.conversation.reference);
           setConversationError("");
-          setConversationNotice("تم استعادة آخر محادثة محفوظة مع هذا المختص.");
+          setConversationNotice("تم استعادة آخر طلب محفوظ مع هذا المختص.");
         }
       } catch {
         if (active) {
+          clearConversationIndexValue(selectedId);
           setActiveConversation(null);
-          setReferenceLookup("");
         }
       } finally {
         if (active) {
@@ -324,45 +328,66 @@ export function SpecialistsDirectory() {
     };
   }, [selectedId]);
 
-  useEffect(() => {
-    if (!activeConversation) {
-      return;
+  const selectedSpecialistRatings = useMemo(() => {
+    if (!selectedSpecialist) {
+      return [];
     }
 
-    setRatingForm({
-      serviceArea: activeConversation.issueTitle,
-      rating: 5,
-      comment: "",
-    });
-    setRatingErrors({});
-    setRatingNotice("");
-  }, [activeConversation]);
+    return ratings.filter((rating) => rating.specialistId === selectedSpecialist.id);
+  }, [ratings, selectedSpecialist]);
 
-  function setRequestField<K extends keyof SpecialistRequestForm>(field: K, value: SpecialistRequestForm[K]) {
+  const selectedSpecialistRatingSummary = buildRatingSummary(selectedSpecialistRatings);
+
+  const ratingSummaryBySpecialist = useMemo(() => {
+    return specialists.reduce<Record<string, ReturnType<typeof buildRatingSummary>>>((collection, specialist) => {
+      collection[specialist.id] = buildRatingSummary(
+        ratings.filter((rating) => rating.specialistId === specialist.id),
+      );
+      return collection;
+    }, {});
+  }, [ratings]);
+
+  const alreadyRatedCurrentConversation = useMemo(() => {
+    if (!activeConversation || !selectedSpecialist) {
+      return false;
+    }
+
+    return ratings.some(
+      (rating) =>
+        rating.specialistId === selectedSpecialist.id &&
+        rating.reference.toUpperCase() === activeConversation.reference.toUpperCase(),
+    );
+  }, [activeConversation, ratings, selectedSpecialist]);
+
+  function setRequestFieldValue<K extends keyof SpecialistRequestForm>(
+    field: K,
+    value: SpecialistRequestForm[K],
+  ) {
     setRequestForm((current) => ({ ...current, [field]: value }));
     setRequestErrors((current) => ({ ...current, [field]: undefined }));
     setConversationError("");
     setConversationNotice("");
   }
 
-  function setRatingField<K extends keyof SpecialistRatingForm>(field: K, value: SpecialistRatingForm[K]) {
+  function setRatingFieldValue<K extends keyof SpecialistRatingForm>(
+    field: K,
+    value: SpecialistRatingForm[K],
+  ) {
     setRatingForm((current) => ({ ...current, [field]: value }));
     setRatingErrors((current) => ({ ...current, [field]: undefined }));
     setRatingNotice("");
   }
 
-  function chooseSpecialist(specialistId: string) {
-    setSelectedId(specialistId);
-    setExpandedId(specialistId);
-
+  function focusRequestSection() {
     requestSectionRef.current?.scrollIntoView({
       behavior: "smooth",
       block: "start",
     });
+  }
 
-    window.setTimeout(() => {
-      firstFieldRef.current?.focus();
-    }, 280);
+  function handleSelectSpecialist(specialist: SpecialistProfile) {
+    setSelectedId(specialist.id);
+    focusRequestSection();
   }
 
   function validateRequestForm() {
@@ -421,35 +446,18 @@ export function SpecialistsDirectory() {
     return nextErrors;
   }
 
-  async function loadConversationByReference() {
-    if (!referenceLookup.trim()) {
-      setConversationError("أدخل مرجع المحادثة أولًا.");
-      setConversationNotice("");
-      return;
+  function prepareNewRequest() {
+    if (selectedSpecialist) {
+      clearConversationIndexValue(selectedSpecialist.id);
     }
 
-    setLookupLoading(true);
+    setActiveConversation(null);
+    setRequestForm(emptyRequestForm);
     setConversationError("");
     setConversationNotice("");
-
-    try {
-      const response = await fetch(
-        `/api/specialist-conversations?reference=${encodeURIComponent(referenceLookup.trim())}`,
-        { cache: "no-store" },
-      );
-      const payload = await parseApiResponse<{ conversation: SpecialistConversation; error?: string }>(response);
-
-      setConversationIndexValue(payload.conversation.specialistId, payload.conversation.id);
-      setSelectedId(payload.conversation.specialistId);
-      setExpandedId(payload.conversation.specialistId);
-      setActiveConversation(payload.conversation);
-      setReferenceLookup(payload.conversation.reference);
-      setConversationNotice("تم العثور على المحادثة واستعادتها بنجاح.");
-    } catch (error) {
-      setConversationError(error instanceof Error ? error.message : "تعذر استعادة المحادثة.");
-    } finally {
-      setLookupLoading(false);
-    }
+    setShowCancelForm(false);
+    setMessageDraft("");
+    focusRequestSection();
   }
 
   async function submitRequest(event: React.FormEvent<HTMLFormElement>) {
@@ -495,9 +503,8 @@ export function SpecialistsDirectory() {
 
       setConversationIndexValue(selectedSpecialist.id, payload.conversation.id);
       setActiveConversation(payload.conversation);
-      setReferenceLookup(payload.conversation.reference);
       setRequestErrors({});
-      setConversationNotice("تم التحقق الأولي من البيانات وفتح محادثة مباشرة مع المختص.");
+      setConversationNotice("تم إنشاء الطلب وفتح محادثة مباشرة مع المختص.");
       setMessageDraft("");
     } catch (error) {
       setConversationError(error instanceof Error ? error.message : "تعذر فتح المحادثة حاليًا.");
@@ -519,26 +526,103 @@ export function SpecialistsDirectory() {
     setConversationNotice("");
 
     try {
-      const response = await fetch(`/api/specialist-conversations/${activeConversation.id}/messages`, {
-        method: "POST",
+      const response = await fetch(
+        `/api/specialist-conversations/${activeConversation.id}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sender: "client",
+            senderName: activeConversation.client.name,
+            body: messageDraft,
+          }),
+        },
+      );
+      const payload = await parseApiResponse<{ conversation: SpecialistConversation; error?: string }>(response);
+
+      setActiveConversation(payload.conversation);
+      setMessageDraft("");
+      setConversationNotice("تم إرسال رسالتك إلى المختص.");
+    } catch (error) {
+      setConversationError(error instanceof Error ? error.message : "تعذر إرسال الرسالة.");
+    } finally {
+      setMessageSubmitting(false);
+    }
+  }
+
+  async function handleQuoteDecision(decision: "accepted" | "rejected") {
+    if (!activeConversation) {
+      return;
+    }
+
+    setQuoteSubmitting(true);
+    setConversationError("");
+    setConversationNotice("");
+
+    try {
+      const response = await fetch(`/api/specialist-conversations/${activeConversation.id}`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          sender: "client",
-          senderName: activeConversation.client.name,
-          body: messageDraft,
+          quoteDecision: decision,
         }),
       });
       const payload = await parseApiResponse<{ conversation: SpecialistConversation; error?: string }>(response);
 
       setActiveConversation(payload.conversation);
-      setMessageDraft("");
-      setConversationNotice("تم إرسال رسالتك إلى المختص داخل القناة الحالية.");
+      setConversationNotice(
+        decision === "accepted"
+          ? "تم قبول العرض السعري وتفعيل الطلب."
+          : "تم رفض العرض السعري الحالي، ويمكن انتظار تعديل جديد من المختص.",
+      );
     } catch (error) {
-      setConversationError(error instanceof Error ? error.message : "تعذر إرسال الرسالة.");
+      setConversationError(error instanceof Error ? error.message : "تعذر تحديث قرار التسعير.");
     } finally {
-      setMessageSubmitting(false);
+      setQuoteSubmitting(false);
+    }
+  }
+
+  async function cancelRequest() {
+    if (!activeConversation) {
+      return;
+    }
+
+    if (cancelReason === "سبب آخر" && !cancelOtherReason.trim()) {
+      setConversationError("يرجى كتابة سبب الإلغاء الآخر.");
+      return;
+    }
+
+    setCancelSubmitting(true);
+    setConversationError("");
+    setConversationNotice("");
+
+    try {
+      const response = await fetch(`/api/specialist-conversations/${activeConversation.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cancellation: {
+            reason: cancelReason,
+            details: cancelReason === "سبب آخر" ? cancelOtherReason : undefined,
+            cancelledBy: "client",
+          },
+        }),
+      });
+      const payload = await parseApiResponse<{ conversation: SpecialistConversation; error?: string }>(response);
+
+      setActiveConversation(payload.conversation);
+      setShowCancelForm(false);
+      setConversationNotice("تم إلغاء الطلب بنجاح.");
+    } catch (error) {
+      setConversationError(error instanceof Error ? error.message : "تعذر إلغاء الطلب.");
+    } finally {
+      setCancelSubmitting(false);
     }
   }
 
@@ -579,6 +663,7 @@ export function SpecialistsDirectory() {
       setRatings((current) => [payload.rating, ...current]);
       setRatingNotice("تم حفظ تقييمك وإضافته إلى تقييمات هذا المختص.");
       setRatingErrors({});
+      setRatingForm(emptyRatingForm);
     } catch (error) {
       setRatingNotice(error instanceof Error ? error.message : "تعذر إرسال التقييم.");
     } finally {
@@ -590,664 +675,37 @@ export function SpecialistsDirectory() {
 
   return (
     <div className="space-y-8">
-      <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="panel cyber-card overflow-hidden p-6 md:p-8">
-          <div className="space-y-5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-4 py-2 text-sm text-cyanGlow">
-              <ShieldCheck className="size-4" />
-              بوابة الطلبات والمحادثات
-            </div>
-            <h3 className="font-heading text-4xl leading-tight text-white">
-              اختر المختص، وثّق بياناتك، وافتح قناة محادثة مباشرة داخل Cyvero
-            </h3>
-            <p className="leading-8 text-steel">
-              صمّمنا هذه التجربة لتكون أقرب إلى مسار عمل حقيقي: اختيار مختص مناسب، تحقق أولي من بيانات
-              التواصل، قناة رسائل بين العميل والمختص، ثم تقييم موثّق مرتبط بمرجع المحادثة.
-            </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/specialists/login"
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white"
-              >
-                دخول المختصين
-                <ArrowUpLeft className="size-4" />
-              </Link>
-              <button
-                type="button"
-                onClick={() => chooseSpecialist(selectedId)}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm font-semibold text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10"
-              >
-                ابدأ مع المختص الحالي
-                <Sparkles className="size-4" />
-              </button>
-            </div>
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5 text-sm leading-7 text-steel">
-              النسخة الحالية تجريبية، لكنها تحفظ المحادثات والتقييمات داخل المشروع نفسه لتجربة أكثر واقعية
-              من الرسائل الوهمية المؤقتة فقط.
-            </div>
-          </div>
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <div className="panel-soft cyber-card p-5">
+          <p className="text-sm text-steel">عدد المختصين</p>
+          <p className="mt-3 font-heading text-4xl text-white">{specialists.length}</p>
         </div>
-
-        <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-          <div className="panel-soft cyber-card p-5">
-            <p className="text-sm text-steel">عدد المختصين</p>
-            <p className="mt-3 font-heading text-4xl text-white">{specialists.length}</p>
-            <p className="mt-2 text-sm text-cyanGlow">تغطية لتخصصات متعددة</p>
-          </div>
-          <div className="panel-soft cyber-card p-5">
-            <p className="text-sm text-steel">ممرات غير مصنفة</p>
-            <p className="mt-3 font-heading text-4xl text-white">{unclassifiedSpecialists.length}</p>
-            <p className="mt-2 text-sm text-cyanGlow">للعملاء الذين لا يعرفون نوع المشكلة</p>
-          </div>
-          <div className="panel-soft cyber-card p-5">
-            <p className="text-sm text-steel">مختصون لديهم تقييمات</p>
-            <p className="mt-3 font-heading text-4xl text-white">{ratingsLoading ? "..." : specialistsWithRatings}</p>
-            <p className="mt-2 text-sm text-cyanGlow">تقييمات مرتبطة بمراجع محادثات</p>
-          </div>
+        <div className="panel-soft cyber-card p-5">
+          <p className="text-sm text-steel">التخصصات</p>
+          <p className="mt-3 font-heading text-4xl text-white">{specialtyOptions.length - 1}</p>
         </div>
-      </section>
-
-      {selectedSpecialist ? (
-        <section ref={requestSectionRef} className="panel cyber-card overflow-hidden p-6 md:p-8">
-          <div className="grid gap-6 xl:grid-cols-[0.86fr_1.14fr]">
-            <div className="space-y-5">
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-4 py-2 text-sm text-cyanGlow">
-                <BadgeCheck className="size-4" />
-                المختص المحدد
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="flex size-20 items-center justify-center rounded-[1.5rem] border border-cyanGlow/20 bg-gradient-to-br from-cyanGlow/20 via-cyanGlow/10 to-white/5 font-heading text-2xl text-white">
-                  {getInitials(selectedSpecialist.name)}
-                </div>
-                <div>
-                  <h3 className="font-heading text-3xl text-white">{selectedSpecialist.name}</h3>
-                  <p className="mt-1 text-sm font-semibold text-cyanGlow">{selectedSpecialist.primarySpecialty}</p>
-                  <p className="mt-1 text-sm text-steel">{selectedSpecialist.experienceLevel}</p>
-                </div>
-              </div>
-
-              <p className="text-sm leading-8 text-steel">{selectedSpecialist.description}</p>
-
-              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs tracking-[0.14em] text-steel">تقييم هذا المختص</p>
-                    <p className="mt-2 font-heading text-3xl text-white">
-                      {selectedSpecialistRatingSummary.average.toFixed(1)}
-                    </p>
-                  </div>
-                  <div className="flex gap-1 text-amber-300">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <Star
-                        key={index}
-                        className={cn(
-                          "size-5",
-                          index < Math.round(selectedSpecialistRatingSummary.average) && "fill-current",
-                        )}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <p className="mt-3 text-sm text-steel">
-                  {ratingsLoading
-                    ? "جار تحميل تقييمات المختص..."
-                    : selectedSpecialistRatingSummary.total > 0
-                      ? `${selectedSpecialistRatingSummary.total} تقييمات مرتبطة بطلبات حقيقية`
-                      : "لا توجد تقييمات لهذا المختص بعد."}
-                </p>
-              </div>
-
-              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                <p className="text-xs tracking-[0.14em] text-steel">المشكلات التي يتعامل معها</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {selectedSpecialist.handles.map((item) => (
-                    <span
-                      key={item}
-                      className="rounded-full border border-cyanGlow/15 bg-midnight/60 px-3 py-1 text-xs text-cyanGlow"
-                    >
-                      {item}
-                    </span>
-                  ))}
-                </div>
-                <p className="mt-4 text-sm leading-7 text-steel">{selectedSpecialist.availability}</p>
-              </div>
-
-              <div className="rounded-[1.5rem] border border-cyanGlow/15 bg-cyanGlow/10 p-5">
-                <div className="flex items-center gap-2 text-cyanGlow">
-                  <ClipboardCheck className="size-4" />
-                  <span className="text-sm font-semibold">التخصصات الفرعية</span>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {selectedSpecialist.subSpecialties.map((item) => (
-                    <span
-                      key={item}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-100"
-                    >
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {selectedSpecialistRatings.slice(0, 3).length > 0 ? (
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold text-white">آخر تقييمات المختص</p>
-                  {selectedSpecialistRatings.slice(0, 3).map((item) => (
-                    <article key={item.id} className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="font-semibold text-white">{item.clientName}</p>
-                        <div className="flex gap-1 text-amber-300">
-                          {Array.from({ length: 5 }).map((_, index) => (
-                            <Star
-                              key={index}
-                              className={cn("size-4", index < item.rating && "fill-current")}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="mt-2 text-sm font-semibold text-cyanGlow">{item.serviceArea}</p>
-                      <p className="mt-2 text-sm leading-7 text-steel">{item.comment}</p>
-                      <p className="mt-3 text-xs text-steel">{formatArabicDate(item.submittedAt)}</p>
-                    </article>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="space-y-5">
-              <div className="space-y-3">
-                <h3 className="font-heading text-3xl text-white">قناة العميل مع المختص</h3>
-                <p className="leading-8 text-steel">
-                  يمكنك فتح محادثة جديدة بعد التحقق الأولي من بياناتك، أو استعادة محادثة سابقة باستخدام مرجع
-                  الطلب.
-                </p>
-              </div>
-
-              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                <p className="text-sm font-semibold text-white">لدي محادثة سابقة</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
-                  <input
-                    value={referenceLookup}
-                    onChange={(event) => setReferenceLookup(event.target.value)}
-                    className="w-full rounded-[1.35rem] border border-white/10 bg-midnight/40 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                    placeholder="أدخل مرجع المحادثة مثل SPC-2026-XXXX"
-                    dir="ltr"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => void loadConversationByReference()}
-                    disabled={lookupLoading}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyanGlow/20 bg-cyanGlow/10 px-5 py-4 text-sm font-semibold text-cyanGlow transition hover:bg-cyanGlow/15 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {lookupLoading ? (
-                      <>
-                        <LoaderCircle className="size-4 animate-spin" />
-                        جار الاستعادة...
-                      </>
-                    ) : (
-                      "استعادة المحادثة"
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="rounded-[1.5rem] border border-amber-400/20 bg-amber-400/10 p-5 text-sm leading-7 text-amber-50">
-                لا تشارك كلمات المرور أو رموز التحقق أو بيانات الدفع. هذا المسار مخصص لبيانات التواصل ووصف
-                الحالة فقط.
-              </div>
-
-              {conversationNotice ? (
-                <div className="flex items-start gap-3 rounded-[1.35rem] border border-success/30 bg-success/10 px-4 py-3 text-sm text-emerald-100">
-                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-                  <p>{conversationNotice}</p>
-                </div>
-              ) : null}
-
-              {conversationError ? (
-                <div className="flex items-start gap-3 rounded-[1.35rem] border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-rose-100">
-                  <ShieldAlert className="mt-0.5 size-4 shrink-0 text-danger" />
-                  <p>{conversationError}</p>
-                </div>
-              ) : null}
-
-              {conversationLoading ? (
-                <div className="flex min-h-[220px] items-center justify-center rounded-[1.5rem] border border-white/10 bg-white/5 text-steel">
-                  <span className="inline-flex items-center gap-2">
-                    <LoaderCircle className="size-4 animate-spin" />
-                    جار تحميل المحادثة...
-                  </span>
-                </div>
-              ) : activeConversation && activeConversation.specialistId === selectedSpecialist.id ? (
-                <div className="space-y-5">
-                  <div className="rounded-[1.6rem] border border-cyanGlow/15 bg-cyanGlow/10 p-5">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                      <div>
-                        <p className="text-xs tracking-[0.16em] text-steel">مرجع المحادثة</p>
-                        <p className="mt-2 font-heading text-3xl text-white">{activeConversation.reference}</p>
-                      </div>
-                      <span
-                        className={cn(
-                          "rounded-full border px-3 py-1 text-xs",
-                          conversationStatusMap[activeConversation.status].className,
-                        )}
-                      >
-                        {conversationStatusMap[activeConversation.status].label}
-                      </span>
-                    </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-[1.2rem] border border-white/10 bg-midnight/50 p-4">
-                        <p className="text-xs tracking-[0.14em] text-steel">العنوان</p>
-                        <p className="mt-2 font-semibold text-white">{activeConversation.issueTitle}</p>
-                      </div>
-                      <div className="rounded-[1.2rem] border border-white/10 bg-midnight/50 p-4">
-                        <p className="text-xs tracking-[0.14em] text-steel">آخر تحديث</p>
-                        <p className="mt-2 font-semibold text-white">
-                          {formatArabicDateTime(activeConversation.updatedAt)}
-                        </p>
-                      </div>
-                    </div>
-                    <p className="mt-4 text-sm leading-7 text-steel">{activeConversation.verificationNote}</p>
-                  </div>
-
-                  <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                    <p className="text-sm font-semibold text-white">بيانات التحقق الأولي</p>
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <div className="rounded-[1.2rem] border border-white/10 bg-midnight/40 p-4">
-                        <p className="text-xs text-steel">الاسم</p>
-                        <p className="mt-2 text-white">{activeConversation.client.name}</p>
-                      </div>
-                      <div className="rounded-[1.2rem] border border-white/10 bg-midnight/40 p-4">
-                        <p className="text-xs text-steel">البريد الإلكتروني</p>
-                        <p className="mt-2 text-white" dir="ltr">
-                          {activeConversation.client.email}
-                        </p>
-                      </div>
-                      <div className="rounded-[1.2rem] border border-white/10 bg-midnight/40 p-4">
-                        <p className="text-xs text-steel">رقم الجوال</p>
-                        <p className="mt-2 text-white" dir="ltr">
-                          {activeConversation.client.phone}
-                        </p>
-                      </div>
-                      <div className="rounded-[1.2rem] border border-white/10 bg-midnight/40 p-4">
-                        <p className="text-xs text-steel">الجهة والصفة</p>
-                        <p className="mt-2 text-white">
-                          {activeConversation.client.organization} / {activeConversation.client.role}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-semibold text-white">المحادثة</p>
-                        <p className="mt-1 text-sm text-steel">
-                          الردود التي يكتبها المختص من بوابته ستظهر هنا مباشرة عند تحديث الصفحة أو استعادة
-                          المحادثة.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-5 space-y-3">
-                      {activeConversation.messages.map((message) => {
-                        const isClient = message.sender === "client";
-                        const isSystem = message.sender === "system";
-
-                        return (
-                          <article
-                            key={message.id}
-                            className={cn(
-                              "rounded-[1.35rem] border p-4",
-                              isClient
-                                ? "border-cyanGlow/20 bg-cyanGlow/10"
-                                : isSystem
-                                  ? "border-white/10 bg-midnight/50"
-                                  : "border-emerald-400/20 bg-emerald-400/10",
-                            )}
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <p className="font-semibold text-white">{message.senderName}</p>
-                              <p className="text-xs text-steel">{formatArabicDateTime(message.sentAt)}</p>
-                            </div>
-                            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-100">
-                              {message.body}
-                            </p>
-                          </article>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <form onSubmit={sendClientMessage} className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                    <label className="grid gap-2 text-sm text-steel">
-                      أرسل متابعة أو تفاصيل إضافية
-                      <textarea
-                        value={messageDraft}
-                        onChange={(event) => setMessageDraft(event.target.value)}
-                        rows={5}
-                        className="w-full rounded-[1.5rem] border border-white/10 bg-midnight/40 px-4 py-4 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                        placeholder="أضف تفاصيل جديدة، نتائج الفحص، أو أي توضيح يحتاجه المختص."
-                      />
-                    </label>
-
-                    <button
-                      type="submit"
-                      disabled={messageSubmitting}
-                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      {messageSubmitting ? (
-                        <>
-                          <LoaderCircle className="size-4 animate-spin" />
-                          جار الإرسال...
-                        </>
-                      ) : (
-                        <>
-                          إرسال الرسالة
-                          <MessageSquareText className="size-4" />
-                        </>
-                      )}
-                    </button>
-                  </form>
-
-                  <form onSubmit={submitRating} className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                    <div className="space-y-2">
-                      <p className="text-sm font-semibold text-white">قيّم هذا المختص</p>
-                      <p className="text-sm leading-7 text-steel">
-                        التقييم هنا مرتبط مباشرة بمرجع المحادثة الحالي حتى يكون أقرب للتجربة الحقيقية.
-                      </p>
-                    </div>
-
-                    {alreadyRatedCurrentConversation ? (
-                      <div className="mt-4 rounded-[1.35rem] border border-success/30 bg-success/10 px-4 py-3 text-sm text-emerald-100">
-                        تم تسجيل تقييم لهذا المرجع مسبقًا، ولن يظهر نموذج تقييم إضافي لنفس المحادثة.
-                      </div>
-                    ) : (
-                      <>
-                        <label className="mt-4 grid gap-2 text-sm text-steel">
-                          نطاق الخدمة أو نوع المشكلة
-                          <input
-                            value={ratingForm.serviceArea}
-                            onChange={(event) => setRatingField("serviceArea", event.target.value)}
-                            className="w-full rounded-[1.35rem] border border-white/10 bg-midnight/40 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                            placeholder="مثال: اختراق بريد الشركة"
-                          />
-                          {ratingErrors.serviceArea ? (
-                            <span className="text-xs text-danger">{ratingErrors.serviceArea}</span>
-                          ) : null}
-                        </label>
-
-                        <div className="mt-4 rounded-[1.35rem] border border-white/10 bg-midnight/40 p-4">
-                          <p className="text-sm font-semibold text-white">عدد النجوم</p>
-                          <div className="mt-4 flex flex-wrap gap-3">
-                            {Array.from({ length: 5 }).map((_, index) => {
-                              const rating = index + 1;
-                              const active = ratingForm.rating >= rating;
-
-                              return (
-                                <button
-                                  key={rating}
-                                  type="button"
-                                  onClick={() => setRatingField("rating", rating)}
-                                  className={cn(
-                                    "rounded-2xl border px-4 py-3 text-sm transition",
-                                    active
-                                      ? "border-cyanGlow/25 bg-cyanGlow/10 text-cyanGlow"
-                                      : "border-white/10 bg-white/5 text-steel hover:text-white",
-                                  )}
-                                >
-                                  <span className="inline-flex items-center gap-2">
-                                    <Star className={cn("size-4", active && "fill-current")} />
-                                    {rating}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {ratingErrors.rating ? (
-                            <p className="mt-3 text-xs text-danger">{ratingErrors.rating}</p>
-                          ) : null}
-                        </div>
-
-                        <label className="mt-4 grid gap-2 text-sm text-steel">
-                          تعليقك على المختص
-                          <textarea
-                            value={ratingForm.comment}
-                            onChange={(event) => setRatingField("comment", event.target.value)}
-                            rows={5}
-                            className="w-full rounded-[1.5rem] border border-white/10 bg-midnight/40 px-4 py-4 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                            placeholder="شارك رأيك في سرعة الاستجابة، وضوح التوجيه، وفهم المختص للحالة."
-                          />
-                          {ratingErrors.comment ? (
-                            <span className="text-xs text-danger">{ratingErrors.comment}</span>
-                          ) : null}
-                        </label>
-
-                        <button
-                          type="submit"
-                          disabled={ratingSubmitting}
-                          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-cyanGlow/20 bg-cyanGlow/10 px-5 py-4 text-sm font-bold text-cyanGlow transition hover:bg-cyanGlow/15 disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                          {ratingSubmitting ? (
-                            <>
-                              <LoaderCircle className="size-4 animate-spin" />
-                              جار حفظ التقييم...
-                            </>
-                          ) : (
-                            "إرسال تقييم المختص"
-                          )}
-                        </button>
-                      </>
-                    )}
-
-                    {ratingNotice ? (
-                      <div className="mt-4 rounded-[1.35rem] border border-white/10 bg-midnight/40 px-4 py-3 text-sm text-slate-100">
-                        {ratingNotice}
-                      </div>
-                    ) : null}
-                  </form>
-                </div>
-              ) : (
-                <form onSubmit={submitRequest} className="space-y-5">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <label className="grid gap-2 text-sm text-steel">
-                      الاسم الكامل
-                      <input
-                        ref={firstFieldRef}
-                        value={requestForm.clientName}
-                        onChange={(event) => setRequestField("clientName", event.target.value)}
-                        className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                        placeholder="الاسم الكامل"
-                      />
-                      {requestErrors.clientName ? (
-                        <span className="text-xs text-danger">{requestErrors.clientName}</span>
-                      ) : null}
-                    </label>
-
-                    <label className="grid gap-2 text-sm text-steel">
-                      البريد الإلكتروني
-                      <div className="relative">
-                        <Mail className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-cyanGlow" />
-                        <input
-                          type="email"
-                          value={requestForm.email}
-                          onChange={(event) => setRequestField("email", event.target.value)}
-                          className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 py-3.5 pl-4 pr-11 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                          placeholder="name@example.com"
-                          dir="ltr"
-                        />
-                      </div>
-                      {requestErrors.email ? <span className="text-xs text-danger">{requestErrors.email}</span> : null}
-                    </label>
-
-                    <label className="grid gap-2 text-sm text-steel">
-                      رقم الجوال
-                      <div className="relative">
-                        <Phone className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-cyanGlow" />
-                        <input
-                          value={requestForm.phone}
-                          onChange={(event) => setRequestField("phone", event.target.value)}
-                          className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 py-3.5 pl-4 pr-11 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                          placeholder="+9665XXXXXXXX"
-                          dir="ltr"
-                        />
-                      </div>
-                      {requestErrors.phone ? <span className="text-xs text-danger">{requestErrors.phone}</span> : null}
-                    </label>
-
-                    <label className="grid gap-2 text-sm text-steel">
-                      المدينة
-                      <div className="relative">
-                        <MapPin className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-cyanGlow" />
-                        <input
-                          value={requestForm.city}
-                          onChange={(event) => setRequestField("city", event.target.value)}
-                          className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 py-3.5 pl-4 pr-11 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                          placeholder="الرياض"
-                        />
-                      </div>
-                      {requestErrors.city ? <span className="text-xs text-danger">{requestErrors.city}</span> : null}
-                    </label>
-
-                    <label className="grid gap-2 text-sm text-steel">
-                      اسم الجهة أو المنشأة
-                      <div className="relative">
-                        <Building2 className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-cyanGlow" />
-                        <input
-                          value={requestForm.organization}
-                          onChange={(event) => setRequestField("organization", event.target.value)}
-                          className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 py-3.5 pl-4 pr-11 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                          placeholder="اسم الشركة أو الجهة"
-                        />
-                      </div>
-                      {requestErrors.organization ? (
-                        <span className="text-xs text-danger">{requestErrors.organization}</span>
-                      ) : null}
-                    </label>
-
-                    <label className="grid gap-2 text-sm text-steel">
-                      صفتك داخل الجهة
-                      <div className="relative">
-                        <UserCheck className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-cyanGlow" />
-                        <input
-                          value={requestForm.role}
-                          onChange={(event) => setRequestField("role", event.target.value)}
-                          className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 py-3.5 pl-4 pr-11 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                          placeholder="مثل: مسؤول تقنية أو مالك نشاط"
-                        />
-                      </div>
-                      {requestErrors.role ? <span className="text-xs text-danger">{requestErrors.role}</span> : null}
-                    </label>
-
-                    <label className="grid gap-2 text-sm text-steel md:col-span-2">
-                      عنوان المشكلة
-                      <div className="relative">
-                        <MessageSquareText className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-cyanGlow" />
-                        <input
-                          value={requestForm.issueTitle}
-                          onChange={(event) => setRequestField("issueTitle", event.target.value)}
-                          className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 py-3.5 pl-4 pr-11 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                          placeholder="مثال: اشتباه في اختراق بريد العمل"
-                        />
-                      </div>
-                      {requestErrors.issueTitle ? (
-                        <span className="text-xs text-danger">{requestErrors.issueTitle}</span>
-                      ) : null}
-                    </label>
-                  </div>
-
-                  <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                    <p className="text-sm font-semibold text-white">مستوى الاستعجال</p>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                      {urgencyOptions.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => setRequestField("urgency", option.value)}
-                          className={cn(
-                            "rounded-[1.35rem] border p-4 text-right transition",
-                            requestForm.urgency === option.value
-                              ? "border-cyanGlow/25 bg-cyanGlow/10 text-cyanGlow"
-                              : "border-white/10 bg-midnight/40 text-steel hover:text-white",
-                          )}
-                        >
-                          <p className="font-semibold">{option.label}</p>
-                          <p className="mt-2 text-xs leading-6 opacity-80">{option.description}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <label className="grid gap-2 text-sm text-steel">
-                    وصف المشكلة
-                    <textarea
-                      value={requestForm.issueDetails}
-                      onChange={(event) => setRequestField("issueDetails", event.target.value)}
-                      rows={7}
-                      className="w-full rounded-[1.5rem] border border-white/10 bg-white/5 px-4 py-4 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                      placeholder="اشرح للمختص ما الذي حدث، متى بدأ، وما المؤشرات التي لاحظتها، وما الذي جرّبته حتى الآن."
-                    />
-                    {requestErrors.issueDetails ? (
-                      <span className="text-xs text-danger">{requestErrors.issueDetails}</span>
-                    ) : null}
-                  </label>
-
-                  <div className="rounded-[1.5rem] border border-cyanGlow/15 bg-cyanGlow/10 p-5 text-sm leading-7 text-steel">
-                    بعد الإرسال سيتم التحقق الأولي من تنسيق البيانات وإنشاء مرجع محادثة فريد، ثم يظهر لك سجل
-                    المحادثة مع المختص المختار مباشرة داخل الصفحة.
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={requestSubmitting}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {requestSubmitting ? (
-                      <>
-                        <LoaderCircle className="size-4 animate-spin" />
-                        جار فتح المحادثة...
-                      </>
-                    ) : (
-                      <>
-                        افتح محادثة مع المختص
-                        <Sparkles className="size-4" />
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="grid gap-4 lg:grid-cols-3">
-        {unclassifiedSpecialists.map((specialist) => (
-          <article key={specialist.id} className="panel-soft cyber-card p-5">
-            <div className="flex items-center gap-4">
-              <div className="flex size-14 items-center justify-center rounded-[1.2rem] border border-cyanGlow/20 bg-cyanGlow/10 font-heading text-lg text-white">
-                {getInitials(specialist.name)}
-              </div>
-              <div>
-                <p className="text-sm text-cyanGlow">للحالات غير المصنفة</p>
-                <h3 className="font-heading text-2xl text-white">{specialist.name}</h3>
-              </div>
-            </div>
-            <p className="mt-4 text-sm leading-7 text-steel">{specialist.description}</p>
-          </article>
-        ))}
+        <div className="panel-soft cyber-card p-5">
+          <p className="text-sm text-steel">مختصون لديهم تقييمات</p>
+          <p className="mt-3 font-heading text-4xl text-white">{specialistsWithRatings}</p>
+        </div>
+        <div className="panel-soft cyber-card p-5">
+          <p className="text-sm text-steel">متوسط تقييم المختص المحدد</p>
+          <p className="mt-3 font-heading text-4xl text-white">
+            {selectedSpecialistRatingSummary.average.toFixed(1)}
+          </p>
+        </div>
       </section>
 
       <section className="panel cyber-card overflow-hidden p-6">
-        <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
+        <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
           <label className="grid gap-2 text-sm text-steel">
-            البحث باسم المختص أو نوع التخصص
+            البحث داخل المختصين
             <div className="relative">
               <Search className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-cyanGlow" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="ابحث عن مختص أو مشكلة أو تخصص"
+                placeholder="ابحث بالاسم أو التخصص أو الوصف"
                 className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 py-3.5 pl-4 pr-11 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
               />
             </div>
@@ -1268,130 +726,703 @@ export function SpecialistsDirectory() {
             </select>
           </label>
         </div>
-
-        <div className="mt-4 rounded-[1.35rem] border border-cyanGlow/15 bg-cyanGlow/10 px-4 py-3 text-sm text-steel">
-          يتم عرض <span className="text-white">{filteredSpecialists.length}</span> مختصًا من أصل
-          <span className="text-white"> {specialists.length} </span>
-          ضمن دليل Cyvero.
-        </div>
-
-        {ratingsError ? (
-          <div className="mt-4 rounded-[1.35rem] border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-rose-100">
-            {ratingsError}
-          </div>
-        ) : null}
       </section>
 
-      {filteredSpecialists.length === 0 ? (
-        <div className="panel flex min-h-[260px] items-center justify-center p-8 text-center">
-          <div className="space-y-3">
-            <p className="font-heading text-2xl text-white">لا يوجد مختص مطابق حاليًا</p>
-            <p className="text-steel">جرّب توسيع البحث أو اختيار كل التخصصات لإظهار المزيد من النتائج.</p>
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {filteredSpecialists.length === 0 ? (
+          <div className="panel col-span-full p-8 text-center">
+            <p className="font-heading text-2xl text-white">لا توجد نتائج مطابقة</p>
+            <p className="mt-3 leading-8 text-steel">
+              جرّب تغيير كلمات البحث أو فلترة التخصص للوصول إلى مختص آخر.
+            </p>
           </div>
-        </div>
-      ) : (
-        <section className="grid gap-5 xl:grid-cols-2">
-          {filteredSpecialists.map((specialist) => {
-            const isExpanded = expandedId === specialist.id;
-            const summary = ratingSummaryBySpecialist[specialist.id] ?? { average: 0, total: 0 };
+        ) : (
+          filteredSpecialists.map((specialist) => {
+            const ratingSummary = ratingSummaryBySpecialist[specialist.id] ?? { total: 0, average: 0 };
+            const selected = specialist.id === selectedId;
 
             return (
-              <article key={specialist.id} className="panel cyber-card overflow-hidden p-6">
+              <article
+                key={specialist.id}
+                className={cn(
+                  "panel cyber-card overflow-hidden p-6 transition duration-300",
+                  selected ? "border-cyanGlow/35 bg-cyanGlow/10 shadow-glow" : "hover:-translate-y-1 hover:border-cyanGlow/20",
+                )}
+              >
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex size-16 items-center justify-center rounded-[1.35rem] border border-cyanGlow/20 bg-gradient-to-br from-cyanGlow/20 via-cyanGlow/10 to-white/5 font-heading text-xl text-white">
-                      {getInitials(specialist.name)}
-                    </div>
-                    <div>
-                      <h3 className="font-heading text-3xl text-white">{specialist.name}</h3>
-                      <p className="mt-1 text-sm font-semibold text-cyanGlow">{specialist.primarySpecialty}</p>
-                      <p className="mt-1 text-sm text-steel">{specialist.experienceLevel}</p>
-                    </div>
+                  <div>
+                    <h3 className="font-heading text-2xl text-white">{specialist.name}</h3>
+                    <p className="mt-2 text-sm font-semibold text-cyanGlow">{specialist.primarySpecialty}</p>
                   </div>
-                  {specialist.supportsUnclassified ? (
-                    <span className="rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-3 py-1 text-xs text-cyanGlow">
-                      للحالات العامة
+                  {selected ? (
+                    <span className="rounded-full border border-cyanGlow/25 bg-cyanGlow/10 px-3 py-1 text-xs text-cyanGlow">
+                      المختص الحالي
                     </span>
                   ) : null}
                 </div>
 
-                <p className="mt-5 text-sm leading-8 text-steel">{specialist.description}</p>
+                <p className="mt-4 text-sm leading-7 text-steel">{specialist.description}</p>
 
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {specialist.subSpecialties.map((item) => (
-                    <span
-                      key={item}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-100"
-                    >
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {specialist.subSpecialties.slice(0, 4).map((item) => (
+                    <span key={item} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-100">
                       {item}
                     </span>
                   ))}
                 </div>
 
-                <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
-                  <div>
-                    <p className="text-xs tracking-[0.14em] text-steel">تقييم المختص</p>
-                    <div className="mt-2 flex items-center gap-3">
-                      <div className="flex gap-1 text-amber-300">
-                        {Array.from({ length: 5 }).map((_, index) => (
-                          <Star
-                            key={index}
-                            className={cn("size-4", index < Math.round(summary.average) && "fill-current")}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-sm font-semibold text-white">{summary.average.toFixed(1)}</span>
-                      <span className="text-sm text-steel">
-                        {summary.total > 0 ? `${summary.total} تقييمات` : "بدون تقييمات بعد"}
-                      </span>
-                    </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs text-steel">الخبرة</p>
+                    <p className="mt-1 text-sm text-white">{specialist.experienceLevel}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => chooseSpecialist(specialist.id)}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white"
-                  >
-                    اختر المختص
-                    <Sparkles className="size-4" />
-                  </button>
-                </div>
-
-                {isExpanded ? (
-                  <div className="mt-5 rounded-[1.4rem] border border-cyanGlow/15 bg-cyanGlow/10 p-4 text-sm leading-7 text-steel">
-                    <div className="flex items-center gap-2 text-cyanGlow">
-                      <ShieldCheck className="size-4" />
-                      <span className="font-semibold">تفاصيل إضافية</span>
-                    </div>
-                    <p className="mt-3">{specialist.availability}</p>
-                    <p className="mt-2">
-                      {specialist.supportsUnclassified
-                        ? "هذا المختص مناسب أيضًا عندما لا يجد العميل تصنيفًا دقيقًا للمشكلة."
-                        : "هذا المختص مناسب للحالات التي تحتاج خبرة مباشرة في هذا المجال دون فرز عام أولي."}
+                  <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs text-steel">التقييم</p>
+                    <p className="mt-1 text-sm text-white">
+                      {ratingSummary.total > 0
+                        ? `${ratingSummary.average.toFixed(1)} من 5`
+                        : "لا توجد تقييمات بعد"}
                     </p>
                   </div>
-                ) : null}
-
-                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => chooseSpecialist(specialist.id)}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm font-semibold text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10"
-                  >
-                    افتح المحادثة
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setExpandedId(isExpanded ? null : specialist.id)}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-midnight/40 px-5 py-4 text-sm font-semibold text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10"
-                  >
-                    {isExpanded ? "إخفاء التفاصيل" : "عرض التفاصيل"}
-                  </button>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectSpecialist(specialist)}
+                  className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white"
+                >
+                  اختيار المختص
+                  <ArrowUpLeft className="size-4" />
+                </button>
               </article>
             );
-          })}
+          })
+        )}
+      </section>
+
+      {selectedSpecialist ? (
+        <section ref={requestSectionRef} className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="space-y-5">
+            <article className="panel cyber-card overflow-hidden p-6 md:p-8">
+              <div className="space-y-5">
+                <div className="inline-flex items-center gap-2 rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-4 py-2 text-sm text-cyanGlow">
+                  <UserCheck className="size-4" />
+                  المختص المحدد
+                </div>
+                <div>
+                  <h3 className="font-heading text-4xl text-white">{selectedSpecialist.name}</h3>
+                  <p className="mt-3 text-base font-semibold text-cyanGlow">
+                    {selectedSpecialist.primarySpecialty}
+                  </p>
+                </div>
+                <p className="leading-8 text-steel">{selectedSpecialist.description}</p>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs text-steel">الخبرة</p>
+                    <p className="mt-1 text-white">{selectedSpecialist.experienceLevel}</p>
+                  </div>
+                  <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs text-steel">التوفر</p>
+                    <p className="mt-1 text-white">{selectedSpecialist.availability}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4">
+                  <p className="text-sm font-semibold text-white">يعالج عادة</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedSpecialist.handles.map((item) => (
+                      <span key={item} className="rounded-full border border-cyanGlow/15 bg-cyanGlow/10 px-3 py-1 text-xs text-cyanGlow">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-white">تقييمات هذا المختص</p>
+                    <span className="text-sm text-cyanGlow">
+                      {selectedSpecialistRatingSummary.average.toFixed(1)} / 5
+                    </span>
+                  </div>
+                  {ratingsLoading ? (
+                    <div className="mt-4 flex items-center gap-2 text-sm text-steel">
+                      <LoaderCircle className="size-4 animate-spin" />
+                      جار تحميل التقييمات...
+                    </div>
+                  ) : selectedSpecialistRatings.length === 0 ? (
+                    <p className="mt-4 text-sm leading-7 text-steel">لا توجد تقييمات مرتبطة بهذا المختص بعد.</p>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {selectedSpecialistRatings.slice(0, 3).map((rating) => (
+                        <div key={rating.id} className="rounded-[1.25rem] border border-white/10 bg-midnight/40 p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="font-semibold text-white">{rating.clientName}</p>
+                            <div className="flex gap-1 text-amber-300">
+                              {Array.from({ length: 5 }).map((_, index) => (
+                                <Star
+                                  key={index}
+                                  className={cn("size-4", index < rating.rating && "fill-current")}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <p className="mt-2 text-sm font-semibold text-cyanGlow">{rating.serviceArea}</p>
+                          <p className="mt-2 text-sm leading-7 text-steel">{rating.comment}</p>
+                          <p className="mt-2 text-xs text-steel">{formatArabicDate(rating.submittedAt)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {ratingsError ? <p className="mt-4 text-sm text-danger">{ratingsError}</p> : null}
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div className="space-y-5">
+            {conversationError ? (
+              <div className="rounded-[1.35rem] border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-rose-100">
+                {conversationError}
+              </div>
+            ) : null}
+
+            {conversationNotice ? (
+              <div className="rounded-[1.35rem] border border-success/30 bg-success/10 px-4 py-3 text-sm text-emerald-100">
+                {conversationNotice}
+              </div>
+            ) : null}
+
+            {conversationLoading ? (
+              <div className="panel flex min-h-[320px] items-center justify-center p-8">
+                <span className="inline-flex items-center gap-2 text-steel">
+                  <LoaderCircle className="size-4 animate-spin" />
+                  جار تحميل الطلب الحالي...
+                </span>
+              </div>
+            ) : activeConversation ? (
+              <>
+                <section className="panel cyber-card overflow-hidden p-6 md:p-8">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs tracking-[0.16em] text-steel">مرجع الطلب</p>
+                      <h3 className="mt-2 font-heading text-3xl text-white">{activeConversation.reference}</h3>
+                      <p className="mt-3 text-sm font-semibold text-cyanGlow">{activeConversation.issueTitle}</p>
+                    </div>
+                    <span
+                      className={cn(
+                        "rounded-full border px-3 py-1 text-xs",
+                        conversationStatusMap[activeConversation.status].className,
+                      )}
+                    >
+                      {conversationStatusMap[activeConversation.status].label}
+                    </span>
+                  </div>
+
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
+                      <div className="flex items-center gap-2 text-steel">
+                        <Building2 className="size-4 text-cyanGlow" />
+                        <span className="text-xs">الجهة</span>
+                      </div>
+                      <p className="mt-2 text-white">{activeConversation.client.organization}</p>
+                    </div>
+                    <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
+                      <div className="flex items-center gap-2 text-steel">
+                        <MapPin className="size-4 text-cyanGlow" />
+                        <span className="text-xs">المدينة</span>
+                      </div>
+                      <p className="mt-2 text-white">{activeConversation.client.city}</p>
+                    </div>
+                    <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
+                      <div className="flex items-center gap-2 text-steel">
+                        <Mail className="size-4 text-cyanGlow" />
+                        <span className="text-xs">البريد الإلكتروني</span>
+                      </div>
+                      <p className="mt-2 text-white" dir="ltr">
+                        {activeConversation.client.email}
+                      </p>
+                    </div>
+                    <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
+                      <div className="flex items-center gap-2 text-steel">
+                        <Phone className="size-4 text-cyanGlow" />
+                        <span className="text-xs">رقم الجوال</span>
+                      </div>
+                      <p className="mt-2 text-white" dir="ltr">
+                        {activeConversation.client.phone}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 rounded-[1.35rem] border border-cyanGlow/15 bg-cyanGlow/10 p-4 text-sm leading-7 text-steel">
+                    {activeConversation.verificationNote}
+                  </div>
+
+                  {activeConversation.quote ? (
+                    <div className="mt-5 rounded-[1.5rem] border border-cyanGlow/20 bg-cyanGlow/10 p-5">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-semibold text-cyanGlow">عرض التسعير</p>
+                          <p className="mt-2 font-heading text-4xl text-white">
+                            {activeConversation.quote.price.toLocaleString("ar-SA")} ريال
+                          </p>
+                        </div>
+                        <div className="rounded-[1.25rem] border border-white/10 bg-midnight/40 px-4 py-3 text-sm text-white">
+                          <div className="inline-flex items-center gap-2">
+                            <Clock3 className="size-4 text-cyanGlow" />
+                            مدة التنفيذ: {activeConversation.quote.durationDays} يوم
+                          </div>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-sm leading-7 text-steel">
+                        حالة التسعير:{" "}
+                        <span className="text-white">
+                          {activeConversation.quote.status === "pending-client"
+                            ? "بانتظار قرارك"
+                            : activeConversation.quote.status === "accepted"
+                              ? "تمت الموافقة"
+                              : "تم الرفض"}
+                        </span>
+                      </p>
+
+                      {activeConversation.quote.status === "pending-client" &&
+                      activeConversation.status !== "cancelled" ? (
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <button
+                            type="button"
+                            disabled={quoteSubmitting}
+                            onClick={() => void handleQuoteDecision("accepted")}
+                            className="rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            قبول السعر
+                          </button>
+                          <button
+                            type="button"
+                            disabled={quoteSubmitting}
+                            onClick={() => void handleQuoteDecision("rejected")}
+                            className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm font-semibold text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            رفض السعر
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="mt-5 rounded-[1.35rem] border border-dashed border-white/10 bg-white/5 p-5 text-sm leading-7 text-steel">
+                      لم يضف المختص تسعيرًا بعد. سيظهر هنا السعر ومدة التنفيذ فور إدخالهما من بوابة المختص.
+                    </div>
+                  )}
+
+                  {activeConversation.cancellation ? (
+                    <div className="mt-5 rounded-[1.35rem] border border-danger/30 bg-danger/10 p-4 text-sm leading-7 text-rose-100">
+                      <div className="flex items-center gap-2 font-semibold">
+                        <XCircle className="size-4" />
+                        تم إلغاء الطلب
+                      </div>
+                      <p className="mt-2">
+                        السبب: {activeConversation.cancellation.reason}
+                        {activeConversation.cancellation.details
+                          ? ` - ${activeConversation.cancellation.details}`
+                          : ""}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {activeConversation.status !== "closed" && activeConversation.status !== "cancelled" ? (
+                    <div className="mt-5">
+                      {showCancelForm ? (
+                        <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+                          <p className="text-sm font-semibold text-white">سبب الإلغاء</p>
+                          <div className="mt-4 grid gap-3">
+                            {cancellationReasons.map((reason) => (
+                              <label
+                                key={reason}
+                                className="flex items-center gap-3 rounded-[1.1rem] border border-white/10 bg-midnight/35 px-4 py-3 text-sm text-white"
+                              >
+                                <input
+                                  type="radio"
+                                  name="cancellationReason"
+                                  checked={cancelReason === reason}
+                                  onChange={() => setCancelReason(reason)}
+                                  className="size-4 accent-cyanGlow"
+                                />
+                                {reason}
+                              </label>
+                            ))}
+                          </div>
+                          {cancelReason === "سبب آخر" ? (
+                            <textarea
+                              value={cancelOtherReason}
+                              onChange={(event) => setCancelOtherReason(event.target.value)}
+                              rows={4}
+                              className="mt-4 w-full rounded-[1.35rem] border border-white/10 bg-midnight/35 px-4 py-3 text-white outline-none"
+                              placeholder="اكتب سبب الإلغاء"
+                            />
+                          ) : null}
+                          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                            <button
+                              type="button"
+                              disabled={cancelSubmitting}
+                              onClick={() => void cancelRequest()}
+                              className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-danger/30 bg-danger/10 px-5 py-4 text-sm font-semibold text-rose-100 transition hover:bg-danger/20 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              تأكيد الإلغاء
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowCancelForm(false)}
+                              className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm font-semibold text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10"
+                            >
+                              تراجع
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowCancelForm(true)}
+                          className="inline-flex items-center gap-2 rounded-2xl border border-danger/30 bg-danger/10 px-5 py-4 text-sm font-semibold text-rose-100 transition hover:bg-danger/20"
+                        >
+                          إلغاء الطلب
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {canOpenNewRequest(activeConversation) ? (
+                    <button
+                      type="button"
+                      onClick={prepareNewRequest}
+                      className="mt-5 inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm font-semibold text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10"
+                    >
+                      فتح طلب جديد مع هذا المختص
+                    </button>
+                  ) : null}
+                </section>
+
+                <section className="panel cyber-card overflow-hidden p-6">
+                  <div className="flex items-center gap-2 text-cyanGlow">
+                    <MessageSquareText className="size-4" />
+                    <span className="text-sm font-semibold">سجل المحادثة</span>
+                  </div>
+                  <div className="mt-5 space-y-3">
+                    {activeConversation.messages.map((message) => (
+                      <article
+                        key={message.id}
+                        className={cn(
+                          "rounded-[1.35rem] border p-4",
+                          message.sender === "specialist"
+                            ? "border-cyanGlow/20 bg-cyanGlow/10"
+                            : message.sender === "system"
+                              ? "border-white/10 bg-midnight/50"
+                              : "border-white/10 bg-white/5",
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="font-semibold text-white">{message.senderName}</p>
+                          <p className="text-xs text-steel">{formatArabicDateTime(message.sentAt)}</p>
+                        </div>
+                        <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-100">{message.body}</p>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+
+                {activeConversation.status !== "closed" && activeConversation.status !== "cancelled" ? (
+                  <form onSubmit={sendClientMessage} className="panel cyber-card overflow-hidden p-6">
+                    <div className="space-y-4">
+                      <div>
+                        <p className="font-semibold text-white">رسالة إلى المختص</p>
+                        <p className="mt-2 text-sm leading-7 text-steel">
+                          استخدم هذه القناة لإرسال التفاصيل الإضافية أو الاستفسار عن الطلب أو التسعير.
+                        </p>
+                      </div>
+                      <textarea
+                        value={messageDraft}
+                        onChange={(event) => setMessageDraft(event.target.value)}
+                        rows={5}
+                        className="w-full rounded-[1.5rem] border border-white/10 bg-white/5 px-4 py-4 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                        placeholder="اكتب رسالتك هنا"
+                      />
+                      <button
+                        type="submit"
+                        disabled={messageSubmitting}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {messageSubmitting ? (
+                          <>
+                            <LoaderCircle className="size-4 animate-spin" />
+                            جار الإرسال...
+                          </>
+                        ) : (
+                          "إرسال الرسالة"
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
+
+                {activeConversation.status === "closed" ? (
+                  <form onSubmit={submitRating} className="panel cyber-card overflow-hidden p-6">
+                    <div className="space-y-5">
+                      <div className="flex items-center gap-2 text-cyanGlow">
+                        <BadgeCheck className="size-4" />
+                        <span className="text-sm font-semibold">تقييم المختص</span>
+                      </div>
+                      <p className="text-sm leading-7 text-steel">
+                        بعد انتهاء الطلب يمكنك إرسال تقييم نجوم وتعليق، وسيظهر في صفحة المختصين والصفحة
+                        الرئيسية.
+                      </p>
+
+                      {alreadyRatedCurrentConversation ? (
+                        <div className="rounded-[1.35rem] border border-success/30 bg-success/10 px-4 py-3 text-sm text-emerald-100">
+                          تم إرسال تقييم لهذا الطلب مسبقًا.
+                        </div>
+                      ) : (
+                        <>
+                          <label className="grid gap-2 text-sm text-steel">
+                            نوع الخدمة
+                            <input
+                              value={ratingForm.serviceArea}
+                              onChange={(event) => setRatingFieldValue("serviceArea", event.target.value)}
+                              className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                              placeholder="مثل: استعادة حساب أو تحليل إصابة"
+                            />
+                            {ratingErrors.serviceArea ? (
+                              <span className="text-xs text-danger">{ratingErrors.serviceArea}</span>
+                            ) : null}
+                          </label>
+
+                          <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4">
+                            <p className="text-sm font-semibold text-white">التقييم بالنجوم</p>
+                            <div className="mt-4 flex flex-wrap gap-3">
+                              {Array.from({ length: 5 }).map((_, index) => {
+                                const rating = index + 1;
+                                const active = ratingForm.rating >= rating;
+
+                                return (
+                                  <button
+                                    key={rating}
+                                    type="button"
+                                    onClick={() => setRatingFieldValue("rating", rating)}
+                                    className={cn(
+                                      "rounded-2xl border px-4 py-3 text-sm transition",
+                                      active
+                                        ? "border-cyanGlow/25 bg-cyanGlow/10 text-cyanGlow"
+                                        : "border-white/10 bg-midnight/40 text-steel hover:text-white",
+                                    )}
+                                  >
+                                    <span className="inline-flex items-center gap-2">
+                                      <Star className={cn("size-4", active && "fill-current")} />
+                                      {rating}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {ratingErrors.rating ? (
+                              <p className="mt-3 text-xs text-danger">{ratingErrors.rating}</p>
+                            ) : null}
+                          </div>
+
+                          <label className="grid gap-2 text-sm text-steel">
+                            التعليق
+                            <textarea
+                              value={ratingForm.comment}
+                              onChange={(event) => setRatingFieldValue("comment", event.target.value)}
+                              rows={5}
+                              className="rounded-[1.5rem] border border-white/10 bg-white/5 px-4 py-4 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                              placeholder="صف تجربتك مع المختص بشكل مختصر ومفيد"
+                            />
+                            {ratingErrors.comment ? (
+                              <span className="text-xs text-danger">{ratingErrors.comment}</span>
+                            ) : null}
+                          </label>
+
+                          <button
+                            type="submit"
+                            disabled={ratingSubmitting}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {ratingSubmitting ? (
+                              <>
+                                <LoaderCircle className="size-4 animate-spin" />
+                                جار إرسال التقييم...
+                              </>
+                            ) : (
+                              "إرسال التقييم"
+                            )}
+                          </button>
+                        </>
+                      )}
+
+                      {ratingNotice ? (
+                        <div className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 text-sm text-white">
+                          {ratingNotice}
+                        </div>
+                      ) : null}
+                    </div>
+                  </form>
+                ) : null}
+              </>
+            ) : (
+              <form onSubmit={submitRequest} className="panel cyber-card overflow-hidden p-6 md:p-8">
+                <div className="space-y-5">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-4 py-2 text-sm text-cyanGlow">
+                    <ShieldCheck className="size-4" />
+                    إنشاء طلب جديد
+                  </div>
+                  <p className="leading-8 text-steel">
+                    بعد اختيار المختص يمكنك تعبئة الطلب، ثم يتم فتح قناة محادثة مباشرة ومتابعة التسعير
+                    والقرار حتى التقييم النهائي.
+                  </p>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="grid gap-2 text-sm text-steel">
+                      الاسم
+                      <input
+                        value={requestForm.clientName}
+                        onChange={(event) => setRequestFieldValue("clientName", event.target.value)}
+                        className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                      />
+                      {requestErrors.clientName ? (
+                        <span className="text-xs text-danger">{requestErrors.clientName}</span>
+                      ) : null}
+                    </label>
+
+                    <label className="grid gap-2 text-sm text-steel">
+                      البريد الإلكتروني
+                      <input
+                        value={requestForm.email}
+                        onChange={(event) => setRequestFieldValue("email", event.target.value)}
+                        className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                        dir="ltr"
+                      />
+                      {requestErrors.email ? (
+                        <span className="text-xs text-danger">{requestErrors.email}</span>
+                      ) : null}
+                    </label>
+
+                    <label className="grid gap-2 text-sm text-steel">
+                      رقم الجوال
+                      <input
+                        value={requestForm.phone}
+                        onChange={(event) => setRequestFieldValue("phone", event.target.value)}
+                        className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                        dir="ltr"
+                      />
+                      {requestErrors.phone ? (
+                        <span className="text-xs text-danger">{requestErrors.phone}</span>
+                      ) : null}
+                    </label>
+
+                    <label className="grid gap-2 text-sm text-steel">
+                      الجهة أو المنشأة
+                      <input
+                        value={requestForm.organization}
+                        onChange={(event) => setRequestFieldValue("organization", event.target.value)}
+                        className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                      />
+                      {requestErrors.organization ? (
+                        <span className="text-xs text-danger">{requestErrors.organization}</span>
+                      ) : null}
+                    </label>
+
+                    <label className="grid gap-2 text-sm text-steel">
+                      الصفة
+                      <input
+                        value={requestForm.role}
+                        onChange={(event) => setRequestFieldValue("role", event.target.value)}
+                        className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                        placeholder="مثل: مالك الحساب أو مسؤول تقنية"
+                      />
+                      {requestErrors.role ? <span className="text-xs text-danger">{requestErrors.role}</span> : null}
+                    </label>
+
+                    <label className="grid gap-2 text-sm text-steel">
+                      المدينة
+                      <input
+                        value={requestForm.city}
+                        onChange={(event) => setRequestFieldValue("city", event.target.value)}
+                        className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                      />
+                      {requestErrors.city ? <span className="text-xs text-danger">{requestErrors.city}</span> : null}
+                    </label>
+
+                    <label className="grid gap-2 text-sm text-steel md:col-span-2">
+                      عنوان المشكلة
+                      <input
+                        value={requestForm.issueTitle}
+                        onChange={(event) => setRequestFieldValue("issueTitle", event.target.value)}
+                        className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                        placeholder="مثل: فقدان الوصول إلى حساب العمل"
+                      />
+                      {requestErrors.issueTitle ? (
+                        <span className="text-xs text-danger">{requestErrors.issueTitle}</span>
+                      ) : null}
+                    </label>
+
+                    <div className="grid gap-3 rounded-[1.35rem] border border-white/10 bg-white/5 p-4 md:col-span-2">
+                      <p className="text-sm font-semibold text-white">درجة الاستعجال</p>
+                      <div className="grid gap-3 md:grid-cols-3">
+                        {urgencyOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setRequestFieldValue("urgency", option.value)}
+                            className={cn(
+                              "rounded-[1.2rem] border px-4 py-4 text-right transition",
+                              requestForm.urgency === option.value
+                                ? "border-cyanGlow/25 bg-cyanGlow/10 text-cyanGlow"
+                                : "border-white/10 bg-midnight/40 text-steel hover:text-white",
+                            )}
+                          >
+                            <p className="font-semibold">{option.label}</p>
+                            <p className="mt-1 text-xs leading-6">{option.description}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <label className="grid gap-2 text-sm text-steel md:col-span-2">
+                      وصف الحالة
+                      <textarea
+                        value={requestForm.issueDetails}
+                        onChange={(event) => setRequestFieldValue("issueDetails", event.target.value)}
+                        rows={7}
+                        className="rounded-[1.5rem] border border-white/10 bg-white/5 px-4 py-4 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                        placeholder="اشرح ما حدث، ومتى بدأ، وما الأثر الظاهر"
+                      />
+                      {requestErrors.issueDetails ? (
+                        <span className="text-xs text-danger">{requestErrors.issueDetails}</span>
+                      ) : null}
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={requestSubmitting}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {requestSubmitting ? (
+                      <>
+                        <LoaderCircle className="size-4 animate-spin" />
+                        جار إنشاء الطلب...
+                      </>
+                    ) : (
+                      <>
+                        إنشاء الطلب
+                        <Sparkles className="size-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </section>
-      )}
+      ) : null}
     </div>
   );
 }

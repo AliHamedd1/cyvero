@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 
 import { Footer } from "@/components/footer";
 import { Navbar } from "@/components/navbar";
+import { SplashScreen } from "@/components/splash-screen";
 
 type AppChromeProps = {
   children: React.ReactNode;
@@ -11,15 +12,16 @@ type AppChromeProps = {
 
 export function AppChrome({ children }: AppChromeProps) {
   const pathname = usePathname();
-  const isDeviceEntryPage = pathname === "/";
+  const isGatewayPage = pathname === "/gateway";
 
   return (
     <div className="relative flex min-h-screen flex-col">
-      {isDeviceEntryPage ? null : <Navbar />}
+      <SplashScreen enabled={pathname === "/"} />
+      {isGatewayPage ? null : <Navbar />}
       <main id="main-content" className="flex-1">
-        {isDeviceEntryPage ? children : <div className="container py-8 md:py-10">{children}</div>}
+        {isGatewayPage ? children : <div className="container py-6 md:py-8 lg:py-10">{children}</div>}
       </main>
-      {isDeviceEntryPage ? null : <Footer />}
+      {isGatewayPage ? null : <Footer />}
     </div>
   );
 }

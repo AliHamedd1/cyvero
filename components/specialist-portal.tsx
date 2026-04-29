@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CircleDollarSign,
   LoaderCircle,
   LogOut,
   MessageSquareText,
@@ -32,17 +33,25 @@ const statusMap: Record<
     label: "بانتظار المختص",
     className: "border-amber-400/30 bg-amber-400/10 text-amber-200",
   },
-  active: {
-    label: "نشطة",
+  quoted: {
+    label: "بانتظار قرار العميل",
     className: "border-cyanGlow/30 bg-cyanGlow/10 text-cyanGlow",
+  },
+  active: {
+    label: "نشط",
+    className: "border-emerald-400/30 bg-emerald-400/10 text-emerald-200",
   },
   "awaiting-client": {
     label: "بانتظار العميل",
     className: "border-violet-400/30 bg-violet-400/10 text-violet-200",
   },
   closed: {
-    label: "مغلقة",
+    label: "مكتمل",
     className: "border-emerald-400/30 bg-emerald-400/10 text-emerald-200",
+  },
+  cancelled: {
+    label: "ملغي",
+    className: "border-danger/30 bg-danger/10 text-rose-100",
   },
 };
 
@@ -78,6 +87,9 @@ export function SpecialistPortal() {
   const [replyDraft, setReplyDraft] = useState("");
   const [replySubmitting, setReplySubmitting] = useState(false);
   const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [quotePrice, setQuotePrice] = useState("");
+  const [quoteDurationDays, setQuoteDurationDays] = useState("");
+  const [quoteSubmitting, setQuoteSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -195,14 +207,26 @@ export function SpecialistPortal() {
   const selectedConversation =
     filteredConversations.find((conversation) => conversation.id === selectedConversationId) ?? null;
 
+  useEffect(() => {
+    if (!selectedConversation?.quote) {
+      setQuotePrice("");
+      setQuoteDurationDays("");
+      return;
+    }
+
+    setQuotePrice(String(selectedConversation.quote.price));
+    setQuoteDurationDays(String(selectedConversation.quote.durationDays));
+  }, [selectedConversation?.id, selectedConversation?.quote]);
+
   const ratingSummary = buildRatingSummary(ratings);
   const pendingCount = conversations.filter((conversation) => conversation.status === "pending").length;
-  const activeCount = conversations.filter((conversation) => conversation.status === "active").length;
+  const quotedCount = conversations.filter((conversation) => conversation.status === "quoted").length;
   const closedCount = conversations.filter((conversation) => conversation.status === "closed").length;
 
   async function refreshSelectedConversation(conversationId: string) {
     const response = await fetch(`/api/specialist-conversations/${conversationId}`, { cache: "no-store" });
     const payload = await parseApiResponse<{ conversation: SpecialistConversation; error?: string }>(response);
+
     setConversations((current) =>
       current.map((item) => (item.id === payload.conversation.id ? payload.conversation : item)),
     );
@@ -238,7 +262,7 @@ export function SpecialistPortal() {
         current.map((item) => (item.id === payload.conversation.id ? payload.conversation : item)),
       );
       setReplyDraft("");
-      setNotice("تم إرسال رد المختص إلى قناة العميل بنجاح.");
+      setNotice("تم إرسال رد المختص إلى القناة الحالية.");
     } catch (replyError) {
       setError(replyError instanceof Error ? replyError.message : "تعذر إرسال الرد.");
     } finally {
@@ -268,12 +292,63 @@ export function SpecialistPortal() {
       setConversations((current) =>
         current.map((item) => (item.id === payload.conversation.id ? payload.conversation : item)),
       );
-      setNotice("تم تحديث حالة المحادثة.");
+      setNotice("تم تحديث حالة الطلب.");
       await refreshSelectedConversation(payload.conversation.id);
     } catch (statusError) {
       setError(statusError instanceof Error ? statusError.message : "تعذر تحديث الحالة.");
     } finally {
       setStatusSubmitting(false);
+    }
+  }
+
+  async function submitQuote(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedConversation) {
+      return;
+    }
+
+    const price = Number(quotePrice);
+    const durationDays = Number(quoteDurationDays);
+
+    if (!Number.isFinite(price) || price <= 0) {
+      setError("يرجى إدخال سعر صالح.");
+      return;
+    }
+
+    if (!Number.isFinite(durationDays) || durationDays <= 0) {
+      setError("يرجى إدخال مدة تنفيذ صالحة.");
+      return;
+    }
+
+    setQuoteSubmitting(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(`/api/specialist-conversations/${selectedConversation.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          quote: {
+            price,
+            durationDays,
+          },
+        }),
+      });
+      const payload = await parseApiResponse<{ conversation: SpecialistConversation; error?: string }>(response);
+
+      setConversations((current) =>
+        current.map((item) => (item.id === payload.conversation.id ? payload.conversation : item)),
+      );
+      setNotice("تم حفظ السعر ومدة التنفيذ وإرسالهما إلى العميل.");
+      await refreshSelectedConversation(payload.conversation.id);
+    } catch (quoteError) {
+      setError(quoteError instanceof Error ? quoteError.message : "تعذر حفظ التسعير.");
+    } finally {
+      setQuoteSubmitting(false);
     }
   }
 
@@ -308,8 +383,8 @@ export function SpecialistPortal() {
                 {session?.username}
               </p>
               <p className="leading-8 text-steel">
-                من هذه البوابة يمكن للمختص مراجعة الطلبات الواردة إليه، إدارة حالة المحادثات، والرد على
-                العملاء داخل النسخة التجريبية الحالية.
+                من هذه البوابة يمكن للمختص مراجعة الطلبات الواردة، الرد على العملاء، إضافة السعر ومدة
+                التنفيذ، ثم إغلاق الطلب بعد اكتماله.
               </p>
             </div>
 
@@ -326,7 +401,7 @@ export function SpecialistPortal() {
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="panel-soft cyber-card p-5">
-            <p className="text-sm text-steel">كل المحادثات</p>
+            <p className="text-sm text-steel">كل الطلبات</p>
             <p className="mt-3 font-heading text-4xl text-white">{conversations.length}</p>
           </div>
           <div className="panel-soft cyber-card p-5">
@@ -334,14 +409,14 @@ export function SpecialistPortal() {
             <p className="mt-3 font-heading text-4xl text-white">{pendingCount}</p>
           </div>
           <div className="panel-soft cyber-card p-5">
-            <p className="text-sm text-steel">المحادثات النشطة</p>
-            <p className="mt-3 font-heading text-4xl text-white">{activeCount}</p>
+            <p className="text-sm text-steel">بانتظار قرار العميل</p>
+            <p className="mt-3 font-heading text-4xl text-white">{quotedCount}</p>
           </div>
           <div className="panel-soft cyber-card p-5">
             <p className="text-sm text-steel">متوسط التقييم</p>
             <p className="mt-3 font-heading text-4xl text-white">{ratingSummary.average.toFixed(1)}</p>
             <p className="mt-2 text-xs text-steel">
-              {ratingSummary.total} تقييمات مرتبطة بالمراجع · {closedCount} حالات مغلقة
+              {ratingSummary.total} تقييمات مرتبطة بـ {closedCount} طلبات مكتملة
             </p>
           </div>
         </div>
@@ -365,7 +440,7 @@ export function SpecialistPortal() {
               </label>
 
               <label className="grid gap-2 text-sm text-steel">
-                تصفية بالحالة
+                فلترة بالحالة
                 <select
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value as "all" | SpecialistConversationStatus)}
@@ -390,12 +465,12 @@ export function SpecialistPortal() {
                 <div className="flex min-h-[180px] items-center justify-center text-steel">
                   <span className="inline-flex items-center gap-2">
                     <LoaderCircle className="size-4 animate-spin" />
-                    جار تحميل المحادثات...
+                    جار تحميل الطلبات...
                   </span>
                 </div>
               ) : filteredConversations.length === 0 ? (
                 <div className="rounded-[1.5rem] border border-dashed border-cyanGlow/20 bg-cyanGlow/10 p-6 text-center">
-                  <p className="font-heading text-2xl text-white">لا توجد محادثات مطابقة</p>
+                  <p className="font-heading text-2xl text-white">لا توجد طلبات مطابقة</p>
                   <p className="mt-3 leading-8 text-steel">جرّب توسيع البحث أو تغيير فلتر الحالة.</p>
                 </div>
               ) : (
@@ -416,19 +491,12 @@ export function SpecialistPortal() {
                         <p className="font-semibold text-white">{conversation.reference}</p>
                         <p className="mt-1 text-sm text-steel">{conversation.client.name}</p>
                       </div>
-                      <span
-                        className={cn(
-                          "rounded-full border px-3 py-1 text-xs",
-                          statusMap[conversation.status].className,
-                        )}
-                      >
+                      <span className={cn("rounded-full border px-3 py-1 text-xs", statusMap[conversation.status].className)}>
                         {statusMap[conversation.status].label}
                       </span>
                     </div>
                     <p className="mt-3 text-sm font-semibold text-cyanGlow">{conversation.issueTitle}</p>
-                    <p className="mt-2 line-clamp-2 text-sm leading-7 text-steel">
-                      {conversation.issueDetails}
-                    </p>
+                    <p className="mt-2 line-clamp-2 text-sm leading-7 text-steel">{conversation.issueDetails}</p>
                     <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-steel">
                       <span>{conversation.client.organization}</span>
                       <span>{formatArabicDateTime(conversation.updatedAt)}</span>
@@ -462,15 +530,12 @@ export function SpecialistPortal() {
                     <h3 className="mt-2 font-heading text-3xl text-white">{selectedConversation.reference}</h3>
                     <p className="mt-3 text-sm font-semibold text-cyanGlow">{selectedConversation.issueTitle}</p>
                   </div>
-                  <span
-                    className={cn(
-                      "rounded-full border px-3 py-1 text-xs",
-                      statusMap[selectedConversation.status].className,
-                    )}
-                  >
+                  <span className={cn("rounded-full border px-3 py-1 text-xs", statusMap[selectedConversation.status].className)}>
                     {statusMap[selectedConversation.status].label}
                   </span>
                 </div>
+
+                <p className="mt-4 text-sm leading-7 text-steel">{selectedConversation.issueDetails}</p>
 
                 <div className="mt-5 grid gap-3 md:grid-cols-2">
                   <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
@@ -488,7 +553,7 @@ export function SpecialistPortal() {
                     </p>
                   </div>
                   <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
-                    <p className="text-xs text-steel">الجوال</p>
+                    <p className="text-xs text-steel">رقم الجوال</p>
                     <p className="mt-2 text-white" dir="ltr">
                       {selectedConversation.client.phone}
                     </p>
@@ -499,6 +564,15 @@ export function SpecialistPortal() {
                   {selectedConversation.verificationNote}
                 </div>
 
+                {selectedConversation.cancellation ? (
+                  <div className="mt-5 rounded-[1.35rem] border border-danger/30 bg-danger/10 p-4 text-sm leading-7 text-rose-100">
+                    تم إلغاء الطلب. السبب: {selectedConversation.cancellation.reason}
+                    {selectedConversation.cancellation.details
+                      ? ` - ${selectedConversation.cancellation.details}`
+                      : ""}
+                  </div>
+                ) : null}
+
                 <div className="mt-5 grid gap-3 md:grid-cols-2">
                   <button
                     type="button"
@@ -506,7 +580,7 @@ export function SpecialistPortal() {
                     disabled={statusSubmitting}
                     className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10 disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    تحويل إلى بانتظار المختص
+                    بانتظار المختص
                   </button>
                   <button
                     type="button"
@@ -514,7 +588,7 @@ export function SpecialistPortal() {
                     disabled={statusSubmitting}
                     className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10 disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    جعل المحادثة نشطة
+                    تفعيل الطلب
                   </button>
                   <button
                     type="button"
@@ -530,10 +604,72 @@ export function SpecialistPortal() {
                     disabled={statusSubmitting}
                     className="rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    إغلاق الحالة
+                    إغلاق الطلب
                   </button>
                 </div>
               </section>
+
+              <form onSubmit={submitQuote} className="panel cyber-card overflow-hidden p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-cyanGlow">
+                    <CircleDollarSign className="size-4" />
+                    <span className="text-sm font-semibold">التسعير ومدة التنفيذ</span>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="grid gap-2 text-sm text-steel">
+                      السعر بالريال
+                      <input
+                        type="number"
+                        min={1}
+                        value={quotePrice}
+                        onChange={(event) => setQuotePrice(event.target.value)}
+                        className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                      />
+                    </label>
+                    <label className="grid gap-2 text-sm text-steel">
+                      مدة التنفيذ بالأيام
+                      <input
+                        type="number"
+                        min={1}
+                        value={quoteDurationDays}
+                        onChange={(event) => setQuoteDurationDays(event.target.value)}
+                        className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
+                      />
+                    </label>
+                  </div>
+
+                  {selectedConversation.quote ? (
+                    <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4 text-sm leading-7 text-steel">
+                      آخر عرض: <span className="text-white">{selectedConversation.quote.price} ريال</span> لمدة{" "}
+                      <span className="text-white">{selectedConversation.quote.durationDays} يوم</span>
+                      ، والحالة الحالية{" "}
+                      <span className="text-white">
+                        {selectedConversation.quote.status === "pending-client"
+                          ? "بانتظار العميل"
+                          : selectedConversation.quote.status === "accepted"
+                            ? "مقبول"
+                            : "مرفوض"}
+                      </span>
+                      .
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="submit"
+                    disabled={quoteSubmitting}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {quoteSubmitting ? (
+                      <>
+                        <LoaderCircle className="size-4 animate-spin" />
+                        جار حفظ التسعير...
+                      </>
+                    ) : (
+                      "حفظ السعر ومدة التنفيذ"
+                    )}
+                  </button>
+                </div>
+              </form>
 
               <section className="panel cyber-card overflow-hidden p-6">
                 <div className="space-y-3">
@@ -565,42 +701,41 @@ export function SpecialistPortal() {
                 </div>
               </section>
 
-              <form onSubmit={sendReply} className="panel cyber-card overflow-hidden p-6">
-                <div className="space-y-4">
-                  <div>
-                    <p className="font-semibold text-white">رد المختص</p>
-                    <p className="mt-2 text-sm leading-7 text-steel">
-                      أرسل تحديثك أو طلبك لمعلومات إضافية، وسيظهر مباشرة في قناة العميل.
-                    </p>
-                  </div>
+              {selectedConversation.status !== "closed" && selectedConversation.status !== "cancelled" ? (
+                <form onSubmit={sendReply} className="panel cyber-card overflow-hidden p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="font-semibold text-white">رد المختص</p>
+                      <p className="mt-2 text-sm leading-7 text-steel">
+                        أرسل تحديثًا، أو اطلب تفاصيل إضافية، أو وجّه العميل للخطوة التالية.
+                      </p>
+                    </div>
 
-                  <label className="grid gap-2 text-sm text-steel">
-                    نص الرد
                     <textarea
                       value={replyDraft}
                       onChange={(event) => setReplyDraft(event.target.value)}
                       rows={6}
                       className="w-full rounded-[1.5rem] border border-white/10 bg-white/5 px-4 py-4 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                      placeholder="مثل: راجعنا المؤشرات الأولية ونحتاج إلى لقطات من السجلات أو وقت حدوث المشكلة بشكل أدق."
+                      placeholder="اكتب ردك هنا"
                     />
-                  </label>
 
-                  <button
-                    type="submit"
-                    disabled={replySubmitting}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {replySubmitting ? (
-                      <>
-                        <LoaderCircle className="size-4 animate-spin" />
-                        جار إرسال الرد...
-                      </>
-                    ) : (
-                      "إرسال رد المختص"
-                    )}
-                  </button>
-                </div>
-              </form>
+                    <button
+                      type="submit"
+                      disabled={replySubmitting}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {replySubmitting ? (
+                        <>
+                          <LoaderCircle className="size-4 animate-spin" />
+                          جار إرسال الرد...
+                        </>
+                      ) : (
+                        "إرسال رد المختص"
+                      )}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
 
               <section className="panel-soft cyber-card p-6">
                 <div className="flex items-center gap-3">
@@ -617,8 +752,8 @@ export function SpecialistPortal() {
 
                 {ratings.length === 0 ? (
                   <p className="mt-4 text-sm leading-7 text-steel">
-                    لا توجد تقييمات لهذا المختص بعد. ستظهر التقييمات هنا عندما يرسل العملاء مراجعات مرتبطة
-                    بمراجع المحادثات.
+                    لا توجد تقييمات لهذا المختص بعد. ستظهر المراجعات هنا فور إكمال الطلبات وإرسال
+                    التقييمات.
                   </p>
                 ) : (
                   <div className="mt-4 space-y-3">
@@ -631,10 +766,7 @@ export function SpecialistPortal() {
                           </div>
                           <div className="flex gap-1 text-amber-300">
                             {Array.from({ length: 5 }).map((_, index) => (
-                              <Star
-                                key={index}
-                                className={cn("size-4", index < rating.rating && "fill-current")}
-                              />
+                              <Star key={index} className={cn("size-4", index < rating.rating && "fill-current")} />
                             ))}
                           </div>
                         </div>
@@ -652,8 +784,8 @@ export function SpecialistPortal() {
                 <div className="inline-flex rounded-2xl border border-cyanGlow/20 bg-cyanGlow/10 p-3 text-cyanGlow">
                   <UserRound className="size-5" />
                 </div>
-                <p className="font-heading text-2xl text-white">اختر محادثة من القائمة</p>
-                <p className="text-steel">سيظهر هنا ملف العميل، رسائل المحادثة، وأدوات الرد وإدارة الحالة.</p>
+                <p className="font-heading text-2xl text-white">اختر طلبًا من القائمة</p>
+                <p className="text-steel">سيظهر هنا ملف العميل، التسعير، الرسائل، وأدوات إدارة الحالة.</p>
               </div>
             </div>
           )}
@@ -661,8 +793,8 @@ export function SpecialistPortal() {
       </section>
 
       <section className="rounded-[1.6rem] border border-white/10 bg-white/5 p-5 text-sm leading-7 text-steel">
-        هذه البوابة تجريبية داخل الواجهة فقط، لكنها تعطي مسارًا كاملًا للمختص: دخول، استلام محادثات، ردود،
-        حالات، وتقييمات مرتبطة بطلبات حقيقية داخل النسخة الحالية.
+        تم تطوير هذه البوابة لتغطي دورة العمل الأساسية كاملة: استقبال الطلب، التسعير، الردود، إغلاق
+        الحالة، ثم ظهور التقييمات المرتبطة بالطلب.
       </section>
     </div>
   );

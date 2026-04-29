@@ -7,6 +7,10 @@ export const runtimeFiles = {
   communityReviews: "community-reviews.json",
   specialistConversations: "specialist-conversations.json",
   specialistRatings: "specialist-ratings.json",
+  contactSubmissions: "contact-submissions.json",
+  expertRequests: "expert-requests.json",
+  subscriptionOrders: "subscription-orders.json",
+  salesLeads: "sales-leads.json",
 } as const;
 
 async function ensureRuntimeDirectory() {

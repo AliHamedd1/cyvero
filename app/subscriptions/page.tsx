@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { Building2, Shield, Sparkles } from "lucide-react";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { IndividualSubscriptionsShowcase } from "@/components/individual-subscriptions-showcase";
 import { SectionHeading } from "@/components/section-heading";
 import { SubscriptionEntryCard } from "@/components/subscription-entry-card";
 import { siteConfig } from "@/data/site";
@@ -22,15 +23,16 @@ export default function SubscriptionsPage() {
           <div className="space-y-5">
             <SectionHeading
               eyebrow="قسم الاشتراكات"
-              title="استكشف خطط Cyvero للأفراد والمنشآت من صفحة واحدة"
-              description="تمثل هذه الصفحة المدخل الرئيسي لمسار الاشتراكات داخل المنصة، مع فصل واضح بين اشتراكات الأفراد وحلول الشركات، وتجربة قابلة للتوسع لاحقًا نحو مزايا وخدمات ونظم حماية أكثر اكتمالًا."
+              title="اشتراكات الأفراد وحلول الشركات من صفحة واحدة"
+              description="تم تنظيم هذا القسم ليكون واضحًا وسهل التوسعة: باقات فردية، حلول شركات، ونموذج اشتراك فعلي بدون ربط دفع حقيقي في هذه المرحلة."
             />
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4 text-sm leading-7 text-steel">
-                الاشتراكات مصممة بطابع دفاعي وتوعوي وقانوني فقط، دون أي وظائف هجومية أو سلوك ضار.
+                الاشتراكات هنا مهيأة للاستخدام الفعلي داخل النسخة الحالية، مع رسائل نجاح وأرقام اشتراك
+                تجريبية محفوظة داخل المنصة.
               </div>
               <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4 text-sm leading-7 text-steel">
-                يمكنك البدء بخطة فردية أو الانتقال مباشرة إلى حاسبة حلول الشركات حسب احتياجك.
+                يمكنك أيضًا الانتقال إلى حاسبة حلول الشركات ونقل البيانات مباشرة إلى صفحة المبيعات.
               </div>
             </div>
           </div>
@@ -40,10 +42,11 @@ export default function SubscriptionsPage() {
               Cyvero Subscriptions
             </div>
             <p className="mt-4 font-heading text-4xl leading-tight text-white">
-              باقات أفراد وحلول شركات ضمن تجربة واحدة واضحة ومنظمة
+              باقات فردية وحلول شركات ضمن تجربة واحدة واضحة ومنظمة
             </p>
             <p className="mt-4 text-base leading-8 text-steel">
-              اختر المسار المناسب لك، ثم تابع إلى تفاصيل الباقات أو التقدير السعري للشركات مع واجهات تفاعلية مباشرة.
+              اختر المسار المناسب لك، ثم تابع إلى تفاصيل الباقات أو التسعير التقديري للشركات مع واجهات
+              تفاعلية مرتبطة ببعضها.
             </p>
           </div>
         </div>
@@ -52,7 +55,7 @@ export default function SubscriptionsPage() {
       <section className="grid gap-5 lg:grid-cols-2">
         <SubscriptionEntryCard
           title="اشتراكات الأفراد"
-          description="خطط مناسبة للمستخدمين الأفراد مع مقارنة مرئية واضحة وتدرج منطقي في المزايا كلما ارتفع مستوى الاشتراك."
+          description="خطط مناسبة للمستخدمين الأفراد مع مقارنة مرئية واضحة وتدرج منطقي في المزايا."
           href="/subscriptions/individuals"
           icon={Shield}
           badge="للأفراد"
@@ -66,6 +69,15 @@ export default function SubscriptionsPage() {
         />
       </section>
 
+      <section className="space-y-6">
+        <SectionHeading
+          eyebrow="اشتراك مباشر"
+          title="أنشئ اشتراكك الآن من نفس الصفحة"
+          description="اختر الباقة المناسبة ثم أدخل بياناتك لإنشاء رقم اشتراك عشوائي مباشرة داخل المنصة."
+        />
+        <IndividualSubscriptionsShowcase />
+      </section>
+
       <section className="panel-soft p-6 md:p-8">
         <div className="flex items-start gap-4">
           <div className="rounded-2xl border border-cyanGlow/20 bg-cyanGlow/10 p-3 text-cyanGlow">
@@ -74,7 +86,8 @@ export default function SubscriptionsPage() {
           <div className="space-y-3">
             <h3 className="font-heading text-2xl text-white">جاهزية للتوسع مستقبلًا</h3>
             <p className="leading-8 text-steel">
-              تم تنظيم هذا القسم ليكون أساسًا لنظام اشتراكات أكثر تطورًا لاحقًا، يشمل مزايا رقمية، إدارة خطط، وتدرجًا أوضح بين مستويات الخدمة للأفراد والمنشآت.
+              تم تنظيم هذا القسم ليكون أساسًا لنظام اشتراكات أكثر تطورًا لاحقًا، يشمل إدارة الخطط
+              والمزايا ومستويات الخدمة للأفراد والمنشآت.
             </p>
           </div>
         </div>

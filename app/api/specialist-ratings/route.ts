@@ -69,6 +69,13 @@ export async function POST(request: Request) {
     );
   }
 
+  if (matchingConversation.status !== "closed") {
+    return NextResponse.json(
+      { error: "يمكن إرسال التقييم بعد انتهاء الطلب وإغلاقه فقط." },
+      { status: 409 },
+    );
+  }
+
   const ratings = await readRuntimeCollection<SpecialistRating[]>(runtimeFiles.specialistRatings, []);
   const duplicateRating = ratings.find(
     (item) =>

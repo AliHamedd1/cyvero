@@ -131,7 +131,7 @@ export async function POST(request: Request) {
         id: crypto.randomUUID(),
         sender: "system",
         senderName: "Cyvero",
-        body: "تم فتح قناة المراسلة مع المختص وإرسال الطلب إلى بوابته الداخلية بانتظار مراجعته.",
+        body: "تم فتح قناة المراسلة مع المختص وإرسال الطلب إلى بوابته الداخلية بانتظار المراجعة.",
         sentAt: now,
       },
       {

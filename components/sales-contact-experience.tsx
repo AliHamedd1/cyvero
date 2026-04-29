@@ -1,16 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, MessageSquareText, Phone, Send, ShieldCheck } from "lucide-react";
+import { AlertCircle, CheckCircle2, LoaderCircle, MessageSquareText, Phone, Send, ShieldCheck } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
-import {
-  formatCurrency,
-  getCompanyTypeOption,
-  readBusinessQuoteSummary,
-} from "@/data/business";
-import { createPrototypeReference, isValidEmail } from "@/lib/prototype";
+import { formatCurrency, getCompanyTypeOption, readBusinessQuoteSummary } from "@/data/business";
+import { isValidEmail, isValidPhone } from "@/lib/prototype";
 
 const emptyFormState = {
   fullName: "",
@@ -23,8 +19,21 @@ const emptyFormState = {
 type SalesFormState = typeof emptyFormState;
 type SalesFormErrors = Partial<Record<keyof SalesFormState, string>>;
 
-function isValidPhone(value: string) {
-  return /^\+?[0-9\s-]{8,16}$/.test(value.trim());
+async function parseApiResponse(response: Response) {
+  const payload = (await response.json()) as {
+    error?: string;
+    lead?: {
+      reference: string;
+      fullName: string;
+      companyName: string;
+    };
+  };
+
+  if (!response.ok) {
+    throw new Error(payload.error || "تعذر إرسال الطلب إلى فريق المبيعات.");
+  }
+
+  return payload;
 }
 
 export function SalesContactExperience() {
@@ -37,21 +46,25 @@ export function SalesContactExperience() {
 
   const [formState, setFormState] = useState<SalesFormState>(emptyFormState);
   const [errors, setErrors] = useState<SalesFormErrors>({});
+  const [serverError, setServerError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [successState, setSuccessState] = useState<null | {
+    reference: string;
     name: string;
     companyName: string;
-    reference: string;
   }>(null);
 
   function setFieldValue(field: keyof SalesFormState, value: string) {
     setFormState((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
+    setServerError("");
+    setSuccessState(null);
   }
 
   function validateForm() {
     const nextErrors: SalesFormErrors = {};
 
-    if (formState.fullName.trim().length < 5) {
+    if (formState.fullName.trim().length < 4) {
       nextErrors.fullName = "يرجى إدخال الاسم الكامل.";
     }
 
@@ -70,7 +83,7 @@ export function SalesContactExperience() {
     return nextErrors;
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextErrors = validateForm();
 
@@ -80,13 +93,34 @@ export function SalesContactExperience() {
       return;
     }
 
-    setErrors({});
-    setSuccessState({
-      name: formState.fullName.trim(),
-      companyName: formState.companyName.trim(),
-      reference: createPrototypeReference("SAL"),
-    });
-    setFormState(emptyFormState);
+    setSubmitting(true);
+    setServerError("");
+
+    try {
+      const response = await fetch("/api/sales-leads", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formState,
+          quoteSummary,
+        }),
+      });
+      const payload = await parseApiResponse(response);
+
+      setFormState(emptyFormState);
+      setErrors({});
+      setSuccessState({
+        reference: payload.lead?.reference ?? "",
+        name: payload.lead?.fullName ?? "",
+        companyName: payload.lead?.companyName ?? "",
+      });
+    } catch (error) {
+      setServerError(error instanceof Error ? error.message : "تعذر إرسال الطلب إلى فريق المبيعات.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const controlClassName =
@@ -100,10 +134,10 @@ export function SalesContactExperience() {
             <MessageSquareText className="size-4" />
             تواصل مع فريق المبيعات
           </div>
-          <h3 className="font-heading text-3xl text-white">أرسل تفاصيلك وسيتواصل الفريق معك</h3>
+          <h3 className="font-heading text-3xl text-white">أرسل بياناتك وسيتواصل معك الفريق</h3>
           <p className="leading-8 text-steel">
-            سيعتمد فريق المبيعات على الملخص المنقول من صفحة حلول الشركات بالإضافة إلى بيانات التواصل
-            التالية لتقديم متابعة أكثر دقة واحترافية.
+            سيتم إرسال ملخص الاحتياج القادم من حاسبة حلول الشركات مع بيانات التواصل، بحيث يحصل فريق
+            المبيعات على صورة أولية واضحة قبل المتابعة.
           </p>
 
           <form onSubmit={handleSubmit} className="grid gap-4">
@@ -166,25 +200,42 @@ export function SalesContactExperience() {
                 onChange={(event) => setFieldValue("notes", event.target.value)}
                 rows={6}
                 className="w-full rounded-[1.5rem] border border-white/10 bg-white/5 px-4 py-4 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                placeholder="أضف أي ملاحظات تشغيلية أو متطلبات خاصة أو مواعيد مناسبة للتواصل."
+                placeholder="أضف ملاحظات تشغيلية أو متطلبات خاصة أو مواعيد مناسبة للتواصل"
               />
             </label>
 
             <div className="rounded-[1.5rem] border border-cyanGlow/15 bg-cyanGlow/10 p-5 text-sm leading-7 text-steel">
-              هذه الصفحة تجريبية ضمن نسخة Frontend أولية. لن يتم إرسال البيانات إلى Backend حقيقي في
-              هذه المرحلة، ولكن تجربة الانتقال ونقل الملخص تعمل بالكامل داخل الواجهة.
+              الانتقال من الحاسبة إلى هذه الصفحة أصبح متصلًا فعليًا: يتم نقل عدد الأجهزة والسيرفرات
+              والتقدير السعري، ثم حفظ طلب المبيعات داخل المنصة.
             </div>
+
+            {serverError ? (
+              <div className="flex items-start gap-3 rounded-[1.35rem] border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-rose-100">
+                <AlertCircle className="mt-0.5 size-4 shrink-0 text-danger" />
+                <p>{serverError}</p>
+              </div>
+            ) : null}
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 type="submit"
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white"
+                disabled={submitting}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
               >
-                إرسال إلى فريق المبيعات
-                <Send className="size-4" />
+                {submitting ? (
+                  <>
+                    <LoaderCircle className="size-4 animate-spin" />
+                    جار الإرسال...
+                  </>
+                ) : (
+                  <>
+                    إرسال إلى فريق المبيعات
+                    <Send className="size-4" />
+                  </>
+                )}
               </button>
               <Link
-                href="/subscriptions/business"
+                href="/business-solutions"
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm font-semibold text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10"
               >
                 العودة إلى حلول الشركات
@@ -196,15 +247,15 @@ export function SalesContactExperience() {
             <div className="rounded-[1.6rem] border border-success/30 bg-success/10 p-5" aria-live="polite">
               <div className="flex items-center gap-3 text-success">
                 <CheckCircle2 className="size-5" />
-                <span className="text-sm font-semibold">تم إرسال الطلب التجريبي بنجاح</span>
+                <span className="text-sm font-semibold">تم إرسال الطلب بنجاح</span>
               </div>
               <p className="mt-4 text-sm leading-7 text-slate-100">
-                شكرًا <span className="font-semibold text-white">{successState.name}</span>، سيُعامل طلب
+                شكرًا <span className="font-semibold text-white">{successState.name}</span>، تم تسجيل طلب
                 <span className="font-semibold text-white"> {successState.companyName} </span>
-                كمتابعة مبيعات أولية داخل الواجهة.
+                داخل مسار المبيعات التجريبي.
               </p>
               <div className="mt-4 rounded-[1.35rem] border border-white/10 bg-midnight/50 p-4">
-                <p className="text-xs tracking-[0.16em] text-steel">رقم المتابعة التجريبي</p>
+                <p className="text-xs tracking-[0.16em] text-steel">رقم المتابعة</p>
                 <p className="mt-2 font-heading text-3xl text-white">{successState.reference}</p>
               </div>
             </div>
@@ -220,7 +271,7 @@ export function SalesContactExperience() {
             <p className="mt-3 text-sm leading-7 text-steel">
               {hasTransferredData
                 ? "تم نقل هذا الملخص تلقائيًا من صفحة حلول الشركات."
-                : "لم تصل تفاصيل تسعير بعد، ويمكنك استخدام هذه الصفحة للتواصل العام أو العودة للحاسبة."}
+                : "يمكنك استخدام هذه الصفحة للتواصل المباشر حتى قبل تعبئة الحاسبة."}
             </p>
           </div>
 
@@ -250,11 +301,11 @@ export function SalesContactExperience() {
           <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5 text-sm leading-7 text-steel">
             <div className="flex items-center gap-3 text-cyanGlow">
               <ShieldCheck className="size-4" />
-              <span className="font-semibold">كيف سيستخدم الفريق هذه البيانات؟</span>
+              <span className="font-semibold">كيف تُستخدم هذه البيانات</span>
             </div>
             <p className="mt-3">
-              سيعتمد فريق المبيعات على نوع الشركة، عدد أجهزة الكمبيوتر، عدد السيرفرات، والسعر
-              التقديري لتجهيز متابعة تناسب التفاصيل التي تم اختيارها.
+              يعتمد فريق المبيعات على نوع الشركة، وعدد الأجهزة، وعدد السيرفرات، والسعر التقديري لتجهيز
+              متابعة أكثر دقة وملاءمة لاحتياج الجهة.
             </p>
           </div>
         </div>

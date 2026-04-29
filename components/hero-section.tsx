@@ -16,31 +16,31 @@ export function HeroSection() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="eyebrow inline-flex items-center gap-2">
               <ShieldCheck className="size-4" />
-              Cyvero منصة دفاعية وتوعوية فقط
+              منصة عربية دفاعية متكاملة
             </span>
             <span className="inline-flex items-center gap-2 rounded-full border border-cyanGlow/20 bg-white/5 px-4 py-2 text-xs font-semibold tracking-[0.16em] text-white">
               <Sparkles className="size-3.5 text-cyanGlow" />
-              التحديث 1.6
+              التحديث 1.8
             </span>
           </div>
           <div className="space-y-5">
             <h1 className="font-heading text-4xl leading-tight text-white md:text-6xl md:leading-[1.08]">
-              هوية عربية واثقة
+              Cyvero
               <span className="mt-3 block bg-gradient-to-l from-white via-cyanGlow to-cyanGlow bg-clip-text text-2xl text-transparent md:text-4xl">
-                لفهم التهديدات السيبرانية والوقاية منها والاستجابة لها بأمان
+                منصة سيبرانية لحماية الأفراد والشركات من التهديدات الرقمية
               </span>
             </h1>
             <p className="max-w-2xl text-base leading-8 text-steel md:text-lg">
-              Cyvero تقدم تجربة احترافية منظمة تجمع بين مكتبة تهديدات عربية واسعة، شرح دفاعي واضح،
-              تحليل أولي للحالات، ومسار قانوني وآمن للوصول إلى مختصين عند الحاجة.
+              محتوى عربي منظم، تحليل حالة أولي، مختصون، اشتراكات، وحلول شركات ضمن تجربة واحدة
+              احترافية قابلة للتوسعة.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/categories"
+              href="/threats"
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-6 py-4 text-sm font-bold text-slate-950 transition hover:bg-white"
             >
-              ابدأ الاستكشاف
+              استكشف التهديدات
               <ArrowUpLeft className="size-4" />
             </Link>
             <Link
@@ -51,7 +51,7 @@ export function HeroSection() {
               <Sparkles className="size-4" />
             </Link>
           </div>
-          <SearchBar action="/categories" placeholder="ابحث عن تهديد أو تصنيف أو كلمة مفتاحية" />
+          <SearchBar action="/threats" placeholder="ابحث عن تهديد أو تصنيف أو كلمة مفتاحية" />
         </div>
 
         <div className="grid gap-4">
@@ -59,16 +59,16 @@ export function HeroSection() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold text-cyanGlow">نطاق Cyvero</p>
-                <h2 className="mt-2 font-heading text-3xl text-white">موسوعة دفاعية حديثة</h2>
+                <h2 className="mt-2 font-heading text-3xl text-white">واجهة تشغيل عربية حديثة</h2>
               </div>
               <div className="rounded-[1.4rem] border border-cyanGlow/15 bg-cyanGlow/10 px-3 py-2 text-xs text-cyanGlow">
                 Defensive Only
               </div>
             </div>
             <ul className="mt-5 space-y-3 text-sm leading-7 text-slate-100">
-              <li>شرح سيبراني عربي منظم ومهني.</li>
-              <li>تركيز صارم على الوقاية والاحتواء والاستجابة الأولية.</li>
-              <li>عدم تضمين أي أوامر أو أدوات أو خطوات هجومية.</li>
+              <li>محتوى منظم وقابل للبحث والفلترة.</li>
+              <li>تجربة استخدام واضحة على الجوال والكمبيوتر.</li>
+              <li>مسارات حقيقية للمختصين والاشتراكات وحلول الشركات.</li>
             </ul>
           </div>
 

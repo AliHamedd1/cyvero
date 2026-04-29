@@ -152,13 +152,19 @@ export interface SpecialistSession {
 
 export type SpecialistConversationStatus =
   | "pending"
+  | "quoted"
   | "active"
   | "awaiting-client"
-  | "closed";
+  | "closed"
+  | "cancelled";
 
 export type SpecialistConversationUrgency = "routine" | "priority" | "critical";
 
 export type SpecialistMessageSender = "client" | "specialist" | "system";
+
+export type SpecialistQuoteStatus = "pending-client" | "accepted" | "rejected";
+
+export type SpecialistCancellationReason = "السعر مرتفع" | "غير مناسب" | "تم الحل" | "سبب آخر";
 
 export interface SpecialistConversationClient {
   name: string;
@@ -177,6 +183,21 @@ export interface SpecialistConversationMessage {
   sentAt: string;
 }
 
+export interface SpecialistConversationQuote {
+  price: number;
+  durationDays: number;
+  status: SpecialistQuoteStatus;
+  proposedAt: string;
+  respondedAt?: string;
+}
+
+export interface SpecialistConversationCancellation {
+  reason: SpecialistCancellationReason;
+  details?: string;
+  cancelledAt: string;
+  cancelledBy: "client" | "specialist";
+}
+
 export interface SpecialistConversation {
   id: string;
   reference: string;
@@ -191,6 +212,9 @@ export interface SpecialistConversation {
   verificationNote: string;
   client: SpecialistConversationClient;
   messages: SpecialistConversationMessage[];
+  quote?: SpecialistConversationQuote;
+  cancellation?: SpecialistConversationCancellation;
+  closedAt?: string;
 }
 
 export interface SpecialistRating {
@@ -203,4 +227,50 @@ export interface SpecialistRating {
   rating: number;
   comment: string;
   submittedAt: string;
+}
+
+export interface ContactSubmission {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  submittedAt: string;
+}
+
+export interface ExpertRequestSubmission {
+  id: string;
+  reference: string;
+  name: string;
+  email: string;
+  issueType: string;
+  platform: string;
+  urgency: string;
+  description: string;
+  attachmentsName?: string;
+  consent: boolean;
+  submittedAt: string;
+}
+
+export interface SubscriptionOrder {
+  id: string;
+  reference: string;
+  planId: string;
+  planName: string;
+  planPrice: string;
+  fullName: string;
+  email: string;
+  submittedAt: string;
+}
+
+export interface SalesLead {
+  id: string;
+  reference: string;
+  fullName: string;
+  email: string;
+  companyName: string;
+  phone: string;
+  notes: string;
+  submittedAt: string;
+  quoteSummary: BusinessQuoteSummary;
 }

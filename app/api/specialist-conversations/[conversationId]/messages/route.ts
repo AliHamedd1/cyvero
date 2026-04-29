@@ -39,6 +39,14 @@ export async function POST(request: Request, context: Context) {
   }
 
   const currentConversation = conversations[conversationIndex];
+
+  if (["closed", "cancelled"].includes(currentConversation.status)) {
+    return NextResponse.json(
+      { error: "لا يمكن إرسال رسائل جديدة إلى طلب مكتمل أو ملغي." },
+      { status: 409 },
+    );
+  }
+
   const now = new Date().toISOString();
   const message: SpecialistConversationMessage = {
     id: crypto.randomUUID(),
@@ -50,13 +58,17 @@ export async function POST(request: Request, context: Context) {
     sentAt: now,
   };
 
-  const hasSpecialistReply = currentConversation.messages.some((item) => item.sender === "specialist");
-  const nextStatus =
-    payload.sender === "specialist"
-      ? "active"
-      : hasSpecialistReply
-        ? "active"
-        : "pending";
+  let nextStatus = currentConversation.status;
+
+  if (payload.sender === "specialist") {
+    nextStatus = currentConversation.quote?.status === "accepted" ? "active" : "awaiting-client";
+  } else if (payload.sender === "client" && currentConversation.quote?.status === "accepted") {
+    nextStatus = "active";
+  } else if (payload.sender === "client" && currentConversation.status === "quoted") {
+    nextStatus = "quoted";
+  } else {
+    nextStatus = "pending";
+  }
 
   const updatedConversation: SpecialistConversation = {
     ...currentConversation,

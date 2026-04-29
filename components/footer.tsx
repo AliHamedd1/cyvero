@@ -32,7 +32,7 @@ export function Footer() {
         </div>
 
         <div className="space-y-4">
-          <h3 className="font-heading text-xl text-white">روابط شكلية</h3>
+          <h3 className="font-heading text-xl text-white">روابط المنصة</h3>
           <div className="grid gap-2 text-sm">
             {socialLinks.map((link) => (
               <Link key={link.label} href={link.href} className="cyber-link">

@@ -10,29 +10,27 @@ export const siteConfig = {
 
 export const navigationLinks: NavigationLink[] = [
   { label: "الرئيسية", href: "/" },
-  { label: "التصنيفات", href: "/categories" },
   { label: "التهديدات", href: "/threats" },
-  { label: "الاشتراكات", href: "/subscriptions" },
   { label: "حلّل حالتي", href: "/analyze" },
+  { label: "الاشتراكات", href: "/subscriptions" },
   { label: "المختصون", href: "/specialists", matchMode: "exact" },
-  { label: "دخول المختصين", href: "/specialists/login", matchMode: "exact" },
-  { label: "اطلب مختص", href: "/request-expert", matchMode: "exact" },
+  { label: "حلول الشركات", href: "/subscriptions/business", matchMode: "exact" },
   { label: "الأدمن", href: "/admin-login", matchMode: "exact" },
+  { label: "تواصل معنا", href: "/contact", matchMode: "exact" },
+  { label: "من نحن", href: "/why-cyvero", matchMode: "exact" },
 ];
 
 export const footerPlatformLinks: NavigationLink[] = [
   { label: "الرئيسية", href: "/" },
-  { label: "التصنيفات", href: "/categories" },
   { label: "التهديدات", href: "/threats" },
-  { label: "الاشتراكات", href: "/subscriptions" },
   { label: "حلّل حالتي", href: "/analyze" },
+  { label: "الاشتراكات", href: "/subscriptions" },
   { label: "المختصون", href: "/specialists" },
-  { label: "دخول المختصين", href: "/specialists/login" },
-  { label: "اطلب مختص", href: "/request-expert" },
+  { label: "حلول الشركات", href: "/subscriptions/business" },
 ];
 
 export const companyLinks: NavigationLink[] = [
-  { label: "لماذا Cyvero؟", href: "/why-cyvero" },
+  { label: "من نحن", href: "/why-cyvero" },
   { label: "تواصل معنا", href: "/contact" },
 ];
 
