@@ -3,6 +3,7 @@
 import { AlertCircle, CheckCircle2, LoaderCircle, UploadCloud } from "lucide-react";
 import { useState } from "react";
 
+import { readApiPayload } from "@/lib/fetch";
 import { isValidEmail } from "@/lib/prototype";
 
 type ExpertRequestFormState = {
@@ -28,21 +29,6 @@ const emptyForm: ExpertRequestFormState = {
   consent: false,
   attachmentsName: "",
 };
-
-async function parseApiResponse(response: Response) {
-  const payload = (await response.json()) as {
-    error?: string;
-    submission?: {
-      reference: string;
-    };
-  };
-
-  if (!response.ok) {
-    throw new Error(payload.error || "تعذر إرسال الطلب حاليًا.");
-  }
-
-  return payload;
-}
 
 export function ExpertRequestForm() {
   const [formState, setFormState] = useState<ExpertRequestFormState>(emptyForm);
@@ -109,7 +95,12 @@ export function ExpertRequestForm() {
         },
         body: JSON.stringify(formState),
       });
-      const payload = await parseApiResponse(response);
+      const payload = await readApiPayload<{
+        error?: string;
+        submission?: {
+          reference: string;
+        };
+      }>(response, "تعذر إرسال الطلب حاليًا.");
 
       setFormState(emptyForm);
       setErrors({});
@@ -127,7 +118,7 @@ export function ExpertRequestForm() {
     "w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8";
 
   return (
-    <form onSubmit={handleSubmit} className="panel grid gap-5 p-6 md:grid-cols-2 md:p-8">
+    <form onSubmit={handleSubmit} className="panel grid gap-5 p-6 md:grid-cols-2 md:p-8" noValidate>
       <label className="grid gap-2 text-sm text-steel">
         الاسم
         <input
@@ -142,12 +133,14 @@ export function ExpertRequestForm() {
       <label className="grid gap-2 text-sm text-steel">
         البريد الإلكتروني
         <input
-          type="email"
+          type="text"
+          inputMode="email"
           value={formState.email}
           onChange={(event) => setFieldValue("email", event.target.value)}
           className={controlClassName}
           placeholder="name@example.com"
           dir="ltr"
+          autoComplete="email"
         />
         {errors.email ? <span className="text-xs text-danger">{errors.email}</span> : null}
       </label>
@@ -219,14 +212,12 @@ export function ExpertRequestForm() {
             type="file"
             className="hidden"
             aria-label="رفع ملف مرجعي"
-            onChange={(event) =>
-              setFieldValue("attachmentsName", event.target.files?.[0]?.name ?? "")
-            }
+            onChange={(event) => setFieldValue("attachmentsName", event.target.files?.[0]?.name ?? "")}
           />
         </label>
       </div>
 
-      <label className="md:col-span-2 grid gap-2 text-sm text-steel">
+      <label className="grid gap-2 text-sm text-steel md:col-span-2">
         <span className="flex gap-3 rounded-3xl border border-white/10 bg-white/5 p-4 leading-7">
           <input
             type="checkbox"
@@ -234,21 +225,20 @@ export function ExpertRequestForm() {
             onChange={(event) => setFieldValue("consent", event.target.checked)}
             className="mt-1 size-4 accent-cyanGlow"
           />
-          أقر بأن الطلب قانوني، وأنني صاحب الحساب أو الجهاز أو أملك صلاحية قانونية واضحة لطلب
-          المساعدة بشأنه.
+          أقر بأن الطلب قانوني، وأنني صاحب الحساب أو الجهاز أو أملك صلاحية قانونية واضحة لطلب المساعدة بشأنه.
         </span>
         {errors.consent ? <span className="text-xs text-danger">{errors.consent}</span> : null}
       </label>
 
       {serverError ? (
-        <div className="md:col-span-2 flex items-start gap-3 rounded-[1.35rem] border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-rose-100">
+        <div className="flex items-start gap-3 rounded-[1.35rem] border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-rose-100 md:col-span-2">
           <AlertCircle className="mt-0.5 size-4 shrink-0 text-danger" />
           <p>{serverError}</p>
         </div>
       ) : null}
 
       {successState ? (
-        <div className="md:col-span-2 rounded-[1.6rem] border border-success/30 bg-success/10 p-5" aria-live="polite">
+        <div className="rounded-[1.6rem] border border-success/30 bg-success/10 p-5 md:col-span-2" aria-live="polite">
           <div className="flex items-center gap-3 text-success">
             <CheckCircle2 className="size-5" />
             <span className="text-sm font-semibold">تم إرسال الطلب بنجاح</span>
@@ -266,7 +256,7 @@ export function ExpertRequestForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="md:col-span-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-6 py-4 text-sm font-bold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-6 py-4 text-sm font-bold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70 md:col-span-2"
       >
         {submitting ? (
           <>

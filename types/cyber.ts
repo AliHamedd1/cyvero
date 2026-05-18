@@ -93,6 +93,15 @@ export type CompanyType =
   | "government"
   | "other";
 
+export type SpecialistTrack =
+  | "networks"
+  | "accounts"
+  | "malware"
+  | "email"
+  | "mobile"
+  | "systems"
+  | "unclassified";
+
 export interface BusinessQuoteSummary {
   companyType: CompanyType;
   computerCount: number;
@@ -118,11 +127,16 @@ export interface SpecialistProfile {
   id: string;
   name: string;
   primarySpecialty: string;
+  specialtyTrack: SpecialistTrack;
   subSpecialties: string[];
   description: string;
   experienceLevel: string;
   handles: string[];
   availability: string;
+  city: string;
+  starterPrice: number;
+  averageDeliveryDays: number;
+  responseTime: string;
   supportsUnclassified?: boolean;
 }
 

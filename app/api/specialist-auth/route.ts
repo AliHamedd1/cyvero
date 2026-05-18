@@ -6,31 +6,35 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as {
-    username?: string;
-    password?: string;
-  };
+  try {
+    const payload = (await request.json()) as {
+      username?: string;
+      password?: string;
+    };
 
-  const username = payload.username?.trim().toLowerCase() ?? "";
-  const password = payload.password ?? "";
+    const username = payload.username?.trim().toLowerCase() ?? "";
+    const password = payload.password ?? "";
 
-  const account = specialistAccounts.find(
-    (item) => item.username.toLowerCase() === username && item.password === password,
-  );
-
-  if (!account) {
-    return NextResponse.json(
-      { error: "بيانات دخول المختص غير صحيحة. تحقق من اسم المستخدم وكلمة المرور." },
-      { status: 401 },
+    const account = specialistAccounts.find(
+      (item) => item.username.toLowerCase() === username && item.password === password,
     );
-  }
 
-  return NextResponse.json({
-    session: {
-      specialistId: account.specialistId,
-      specialistName: account.specialistName,
-      username: account.username,
-      loggedInAt: new Date().toISOString(),
-    },
-  });
+    if (!account) {
+      return NextResponse.json(
+        { error: "بيانات دخول المختص غير صحيحة. تحقق من اسم المستخدم وكلمة المرور." },
+        { status: 401 },
+      );
+    }
+
+    return NextResponse.json({
+      session: {
+        specialistId: account.specialistId,
+        specialistName: account.specialistName,
+        username: account.username,
+        loggedInAt: new Date().toISOString(),
+      },
+    });
+  } catch {
+    return NextResponse.json({ error: "تعذر تسجيل دخول المختص حاليًا." }, { status: 500 });
+  }
 }

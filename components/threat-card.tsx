@@ -10,24 +10,22 @@ export function ThreatCard({ threat }: { threat: Threat }) {
     <Link
       href={`/threats/${threat.slug}`}
       aria-label={`قراءة تفاصيل التهديد ${threat.name}`}
-      className="group panel cyber-card flex h-full flex-col justify-between overflow-hidden p-6 transition duration-300 hover:-translate-y-1.5 hover:border-cyanGlow/35 hover:shadow-glow"
+      className="group panel cyber-card flex h-full flex-col justify-between overflow-hidden p-6 transition duration-300 hover:-translate-y-0.5 hover:border-cyanGlow/25 hover:shadow-glow"
     >
-      <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-l from-transparent via-cyanGlow/30 to-transparent opacity-0 transition group-hover:opacity-100" />
-      <div className="absolute left-6 top-6 rounded-2xl border border-cyanGlow/15 bg-cyanGlow/10 p-3 text-cyanGlow opacity-80 transition group-hover:scale-105 group-hover:opacity-100">
+      <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-l from-transparent via-cyanGlow/25 to-transparent opacity-0 transition group-hover:opacity-100" />
+      <div className="absolute left-6 top-6 rounded-[1rem] border border-cyanGlow/15 bg-cyanGlow/10 p-3 text-cyanGlow opacity-90">
         <CyberIcon name={threat.icon} className="size-5" />
       </div>
 
       <div className="space-y-5 pt-10">
         <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={`rounded-full border px-3 py-1 text-xs font-semibold ${severityMap[threat.severity].className}`}
-          >
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${severityMap[threat.severity].className}`}>
             {severityMap[threat.severity].label}
           </span>
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-steel">
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-steel">
             {threat.category}
           </span>
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-steel">
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-steel">
             {audienceMap[threat.audience]}
           </span>
           <span className="rounded-full border border-cyanGlow/10 bg-cyanGlow/5 px-3 py-1 text-xs text-cyanGlow">
@@ -40,18 +38,15 @@ export function ThreatCard({ threat }: { threat: Threat }) {
         </div>
         <div className="flex flex-wrap gap-2">
           {threat.affectedSystems.slice(0, 3).map((system) => (
-            <span
-              key={system}
-              className="rounded-full border border-cyanGlow/10 bg-cyanGlow/5 px-3 py-1 text-xs text-cyanGlow"
-            >
+            <span key={system} className="rounded-full border border-cyanGlow/10 bg-cyanGlow/5 px-3 py-1 text-xs text-cyanGlow">
               {system}
             </span>
           ))}
         </div>
       </div>
       <div className="mt-6 flex items-center justify-between text-sm text-cyanGlow">
-        <span>قراءة التفصيل الدفاعي</span>
-        <ArrowUpLeft className="size-4 transition group-hover:-translate-x-1 group-hover:-translate-y-1" />
+        <span>قراءة التفاصيل الدفاعية</span>
+        <ArrowUpLeft className="size-4 transition group-hover:-translate-x-0.5 group-hover:-translate-y-0.5" />
       </div>
     </Link>
   );

@@ -3,6 +3,7 @@
 import { AlertCircle, CheckCircle2, LoaderCircle, Send } from "lucide-react";
 import { useState } from "react";
 
+import { readApiPayload } from "@/lib/fetch";
 import { isValidEmail } from "@/lib/prototype";
 
 type ContactFormState = {
@@ -20,16 +21,6 @@ const emptyForm: ContactFormState = {
   subject: "",
   message: "",
 };
-
-async function parseApiResponse(response: Response) {
-  const payload = (await response.json()) as {
-    error?: string;
-  };
-
-  if (!response.ok) {
-    throw new Error(payload.error || "تعذر إرسال الرسالة حاليًا.");
-  }
-}
 
 export function ContactForm() {
   const [formState, setFormState] = useState<ContactFormState>(emptyForm);
@@ -90,10 +81,10 @@ export function ContactForm() {
         body: JSON.stringify(formState),
       });
 
-      await parseApiResponse(response);
+      await readApiPayload<{ error?: string }>(response, "تعذر إرسال الرسالة حاليًا.");
       setFormState(emptyForm);
       setErrors({});
-      setSuccessMessage("تم إرسال رسالتك بنجاح، وسُجلت داخل المنصة كطلب تواصل جديد.");
+      setSuccessMessage("تم إرسال رسالتك بنجاح، وسيتم التعامل معها داخل Cyvero كطلب تواصل جديد.");
     } catch (error) {
       setServerError(error instanceof Error ? error.message : "تعذر إرسال الرسالة حاليًا.");
     } finally {
@@ -105,7 +96,7 @@ export function ContactForm() {
     "w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8";
 
   return (
-    <form onSubmit={handleSubmit} className="panel space-y-5 p-6 md:p-8">
+    <form onSubmit={handleSubmit} className="panel space-y-5 p-6 md:p-8" noValidate>
       <div className="grid gap-5 md:grid-cols-2">
         <label className="grid gap-2 text-sm text-steel">
           الاسم
@@ -121,12 +112,14 @@ export function ContactForm() {
         <label className="grid gap-2 text-sm text-steel">
           البريد الإلكتروني
           <input
-            type="email"
+            type="text"
+            inputMode="email"
             value={formState.email}
             onChange={(event) => setFieldValue("email", event.target.value)}
             className={controlClassName}
             placeholder="name@example.com"
             dir="ltr"
+            autoComplete="email"
           />
           {errors.email ? <span className="text-xs text-danger">{errors.email}</span> : null}
         </label>

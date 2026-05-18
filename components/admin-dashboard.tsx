@@ -41,25 +41,25 @@ const statCards = [
     title: "عدد البلاغات",
     icon: FolderKanban,
     value: adminIncidents.length,
-    tone: "border-white/10 bg-white/5 text-white",
+    tone: "border-white/10 bg-white/[0.04] text-white",
   },
   {
     key: "critical",
-    title: "عدد الحالات الحرجة",
+    title: "الحالات الحرجة",
     icon: ShieldAlert,
     value: adminIncidents.filter((incident) => incident.severity === "critical").length,
     tone: "border-danger/25 bg-danger/10 text-rose-100",
   },
   {
     key: "open",
-    title: "عدد البلاغات المفتوحة",
+    title: "الحالات المفتوحة",
     icon: ActivitySquare,
     value: adminIncidents.filter((incident) => incident.status !== "closed").length,
     tone: "border-cyanGlow/20 bg-cyanGlow/10 text-cyanGlow",
   },
   {
     key: "closed",
-    title: "عدد البلاغات المغلقة",
+    title: "الحالات المغلقة",
     icon: CheckCircle2,
     value: adminIncidents.filter((incident) => incident.status === "closed").length,
     tone: "border-success/25 bg-success/10 text-success",
@@ -146,32 +146,32 @@ export function AdminDashboard() {
       <aside className="panel-soft cyber-card h-fit p-6 xl:sticky xl:top-24">
         <div className="space-y-6">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-4 py-2 text-sm text-cyanGlow">
+            <div className="eyebrow inline-flex items-center gap-2">
               <ShieldAlert className="size-4" />
               Security Operations
             </div>
             <h3 className="mt-4 font-heading text-3xl text-white">لوحة إدارة الطلبات والبلاغات</h3>
             <p className="mt-3 text-sm leading-7 text-steel">
-              بيانات هذه الصفحة وهمية وتجريبية، لكنها منظمة بطريقة تحاكي لوحة تشغيل أمنية احترافية
-              لعرض الطلبات والبلاغات.
+              هذه الصفحة تعرض نموذج Dashboard تجريبي بطابع مؤسسي واضح، مع بحث وفلاتر وإحصاءات قابلة للعرض في
+              العروض الأكاديمية والاستثمارية.
             </p>
           </div>
 
-          <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
+          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
               <SlidersHorizontal className="size-4 text-cyanGlow" />
               الفلاتر والبحث
             </div>
             <div className="mt-4 grid gap-3">
               <label className="grid gap-2 text-xs font-semibold text-steel">
-                البحث عن الطلبات أو البلاغات
+                البحث عن البلاغات أو الطلبات
                 <div className="relative">
                   <Search className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-cyanGlow" />
                   <input
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="ابحث برقم الطلب أو البلاغ أو الجهة أو النظام"
-                    className="w-full rounded-[1.2rem] border border-white/10 bg-midnight/50 py-3 pl-4 pr-11 text-sm text-white outline-none"
+                    placeholder="ابحث برقم البلاغ أو الجهة أو النظام"
+                    className="control-field py-3 pl-4 pr-11"
                   />
                 </div>
               </label>
@@ -181,7 +181,7 @@ export function AdminDashboard() {
                 <select
                   value={severityFilter}
                   onChange={(event) => setSeverityFilter(event.target.value as Severity | "all")}
-                  className="rounded-[1.2rem] border border-white/10 bg-midnight/50 px-4 py-3 text-sm text-white outline-none"
+                  className="control-field py-3"
                 >
                   {severityFilters.map((item) => (
                     <option key={item.value} value={item.value} className="bg-slatecore text-white">
@@ -196,7 +196,7 @@ export function AdminDashboard() {
                 <select
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value as IncidentStatus | "all")}
-                  className="rounded-[1.2rem] border border-white/10 bg-midnight/50 px-4 py-3 text-sm text-white outline-none"
+                  className="control-field py-3"
                 >
                   {statusFilters.map((item) => (
                     <option key={item.value} value={item.value} className="bg-slatecore text-white">
@@ -211,7 +211,7 @@ export function AdminDashboard() {
                 <select
                   value={typeFilter}
                   onChange={(event) => setTypeFilter(event.target.value)}
-                  className="rounded-[1.2rem] border border-white/10 bg-midnight/50 px-4 py-3 text-sm text-white outline-none"
+                  className="control-field py-3"
                 >
                   <option value="all" className="bg-slatecore text-white">
                     كل الأنواع
@@ -224,20 +224,16 @@ export function AdminDashboard() {
                 </select>
               </label>
 
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="rounded-[1.2rem] border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10"
-              >
+              <button type="button" onClick={resetFilters} className="btn-secondary justify-center px-4 py-3">
                 إعادة ضبط الفلاتر
               </button>
             </div>
           </div>
 
-          <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm leading-7 text-steel">
+          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4 text-sm leading-7 text-steel">
             يعرض الجدول حاليًا <span className="text-white">{filteredIncidents.length}</span> من أصل
             <span className="text-white"> {adminIncidents.length} </span>
-            طلبًا/بلاغًا تجريبيًا.
+            بلاغًا/طلبًا تجريبيًا.
           </div>
 
           <button
@@ -257,13 +253,13 @@ export function AdminDashboard() {
             const Icon = item.icon;
 
             return (
-              <div key={item.key} className={cn("rounded-[1.6rem] border p-5 shadow-panel", item.tone)}>
+              <div key={item.key} className={cn("rounded-[1.45rem] border p-5 shadow-panel", item.tone)}>
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold">{item.title}</p>
                     <p className="mt-3 font-heading text-4xl">{item.value}</p>
                   </div>
-                  <div className="rounded-[1.25rem] border border-current/20 bg-black/10 p-3">
+                  <div className="rounded-[1.1rem] border border-current/20 bg-black/10 p-3">
                     <Icon className="size-5" />
                   </div>
                 </div>
@@ -295,9 +291,9 @@ export function AdminDashboard() {
           ) : (
             <>
               <div className="hidden overflow-hidden xl:block">
-                <div className="mt-5 overflow-x-auto rounded-[1.6rem] border border-white/10">
+                <div className="mt-5 overflow-x-auto rounded-[1.4rem] border border-white/10">
                   <table className="w-full min-w-[980px] text-right text-sm">
-                    <thead className="bg-white/5 text-steel">
+                    <thead className="bg-white/[0.04] text-steel">
                       <tr>
                         <th className="px-4 py-4 font-semibold">رقم الطلب/البلاغ</th>
                         <th className="px-4 py-4 font-semibold">النوع</th>
@@ -317,7 +313,7 @@ export function AdminDashboard() {
                         return (
                           <tr
                             key={incident.id}
-                            className="border-t border-white/8 transition hover:bg-white/5"
+                            className="border-t border-white/8 transition hover:bg-white/[0.04]"
                             title={incident.summary}
                           >
                             <td className="px-4 py-4 font-semibold text-white">{incident.id}</td>
@@ -350,7 +346,7 @@ export function AdminDashboard() {
                   const status = incidentStatusMap[incident.status];
 
                   return (
-                    <article key={incident.id} className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+                    <article key={incident.id} className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="text-xs tracking-[0.16em] text-steel">{incident.id}</p>

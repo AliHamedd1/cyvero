@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { Check, CheckCircle2, Copy, Shield, Sparkles, Star } from "lucide-react";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { IndividualPlan, individualPlans } from "@/data/subscriptions";
+import { readApiPayload } from "@/lib/fetch";
 import { isValidEmail } from "@/lib/prototype";
 import { cn } from "@/lib/utils";
 
@@ -20,24 +22,8 @@ const emptyForm: FormState = {
   email: "",
 };
 
-async function parseApiResponse(response: Response) {
-  const payload = (await response.json()) as {
-    error?: string;
-    order?: {
-      reference: string;
-      email: string;
-      planName: string;
-    };
-  };
-
-  if (!response.ok) {
-    throw new Error(payload.error || "تعذر إنشاء الاشتراك حاليًا.");
-  }
-
-  return payload;
-}
-
 export function IndividualSubscriptionsShowcase() {
+  const searchParams = useSearchParams();
   const [activePlanId, setActivePlanId] = useState<IndividualPlan["id"]>("plus");
   const [formState, setFormState] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -49,6 +35,15 @@ export function IndividualSubscriptionsShowcase() {
   }>(null);
   const [serverError, setServerError] = useState("");
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const requestedPlan = searchParams.get("plan");
+    const matchedPlan = individualPlans.find((plan) => plan.id === requestedPlan);
+
+    if (matchedPlan) {
+      setActivePlanId(matchedPlan.id);
+    }
+  }, [searchParams]);
 
   const activePlan = individualPlans.find((plan) => plan.id === activePlanId) ?? individualPlans[1];
 
@@ -108,7 +103,15 @@ export function IndividualSubscriptionsShowcase() {
           email: formState.email,
         }),
       });
-      const payload = await parseApiResponse(response);
+
+      const payload = await readApiPayload<{
+        error?: string;
+        order?: {
+          reference: string;
+          email: string;
+          planName: string;
+        };
+      }>(response, "تعذر إنشاء الاشتراك حاليًا.");
 
       setFormState(emptyForm);
       setErrors({});
@@ -138,8 +141,7 @@ export function IndividualSubscriptionsShowcase() {
     }
   }
 
-  const controlClassName =
-    "w-full rounded-[1.3rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8";
+  const controlClassName = "control-field";
 
   return (
     <section className="space-y-6">
@@ -156,13 +158,13 @@ export function IndividualSubscriptionsShowcase() {
                 className={cn(
                   "group panel cyber-card h-full overflow-hidden p-5 text-right transition duration-300",
                   isActive
-                    ? "border-cyanGlow/35 bg-cyanGlow/10 shadow-glow"
-                    : "hover:-translate-y-1.5 hover:border-cyanGlow/20",
+                    ? "border-cyanGlow/30 bg-cyanGlow/10 shadow-glow"
+                    : "hover:-translate-y-0.5 hover:border-cyanGlow/20",
                 )}
                 aria-pressed={isActive}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="rounded-2xl border border-cyanGlow/15 bg-cyanGlow/10 p-3 text-cyanGlow">
+                  <div className="icon-shell p-3">
                     {plan.highlight ? <Star className="size-5" /> : <Shield className="size-5" />}
                   </div>
                   <span
@@ -170,7 +172,7 @@ export function IndividualSubscriptionsShowcase() {
                       "rounded-full px-3 py-1 text-xs",
                       plan.highlight
                         ? "border border-cyanGlow/25 bg-cyanGlow/10 text-cyanGlow"
-                        : "border border-white/10 bg-white/5 text-steel",
+                        : "border border-white/10 bg-white/[0.04] text-steel",
                     )}
                   >
                     {plan.badge}
@@ -192,8 +194,8 @@ export function IndividualSubscriptionsShowcase() {
               <span className="rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-3 py-1 text-xs text-cyanGlow">
                 {activePlan.badge}
               </span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-steel">
-                اشتراك بدون دفع فعلي
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-steel">
+                اشتراك تجريبي بدون دفع حقيقي
               </span>
             </div>
 
@@ -203,7 +205,7 @@ export function IndividualSubscriptionsShowcase() {
               <p className="text-sm leading-7 text-steel">{activePlan.priceNote}</p>
             </div>
 
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5">
               <p className="text-sm leading-8 text-steel">{activePlan.description}</p>
             </div>
 
@@ -211,7 +213,7 @@ export function IndividualSubscriptionsShowcase() {
               {activePlan.features.map((feature) => (
                 <div
                   key={feature}
-                  className="flex items-start gap-3 rounded-[1.25rem] border border-white/10 bg-white/5 px-4 py-4 text-sm leading-7 text-slate-100"
+                  className="flex items-start gap-3 rounded-[1.25rem] border border-white/10 bg-white/[0.04] px-4 py-4 text-sm leading-7 text-slate-100"
                 >
                   <div className="mt-1 rounded-full border border-cyanGlow/20 bg-cyanGlow/10 p-1 text-cyanGlow">
                     <Check className="size-3.5" />
@@ -221,9 +223,9 @@ export function IndividualSubscriptionsShowcase() {
               ))}
             </div>
 
-            <form onSubmit={handleSubmit} className="grid gap-4">
+            <form onSubmit={handleSubmit} className="grid gap-4" noValidate>
               <div className="rounded-[1.5rem] border border-cyanGlow/15 bg-cyanGlow/10 p-5 text-sm leading-7 text-steel">
-                يتم إنشاء رقم اشتراك تجريبي فقط داخل المنصة بدون أي ربط دفع حقيقي أو حفظ لبيانات بطاقات.
+                يتم إنشاء رقم اشتراك تجريبي فقط داخل المنصة بدون أي ربط دفع حقيقي أو حفظ لبيانات البطاقات.
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -241,12 +243,14 @@ export function IndividualSubscriptionsShowcase() {
                 <label className="grid gap-2 text-sm text-steel">
                   البريد الإلكتروني
                   <input
-                    type="email"
+                    type="text"
+                    inputMode="email"
                     value={formState.email}
                     onChange={(event) => setFieldValue("email", event.target.value)}
                     className={controlClassName}
                     placeholder="name@example.com"
                     dir="ltr"
+                    autoComplete="email"
                   />
                   {errors.email ? <span className="text-xs text-danger">{errors.email}</span> : null}
                 </label>
@@ -261,7 +265,7 @@ export function IndividualSubscriptionsShowcase() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+                className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? "جار إنشاء الاشتراك..." : "إنشاء الاشتراك"}
                 <Sparkles className="size-4" />
@@ -278,8 +282,8 @@ export function IndividualSubscriptionsShowcase() {
                   <span className="text-sm font-semibold">تم إنشاء الاشتراك بنجاح</span>
                 </div>
                 <p className="mt-4 text-sm leading-7 text-slate-100">
-                  تم تسجيل <span className="font-semibold text-white">{successState.planName}</span> لصاحب
-                  البريد <span className="text-white">{successState.email}</span>.
+                  تم تسجيل <span className="font-semibold text-white">{successState.planName}</span> لصاحب البريد{" "}
+                  <span className="text-white">{successState.email}</span>.
                 </p>
                 <div className="mt-4 rounded-[1.35rem] border border-white/10 bg-midnight/60 p-4">
                   <p className="text-xs tracking-[0.16em] text-steel">رقم الاشتراك</p>
@@ -288,7 +292,7 @@ export function IndividualSubscriptionsShowcase() {
                     <button
                       type="button"
                       onClick={() => void copyReference()}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10"
+                      className="btn-secondary px-4 py-3"
                     >
                       <Copy className="size-4" />
                       {copied ? "تم النسخ" : "نسخ الرقم"}
@@ -298,22 +302,22 @@ export function IndividualSubscriptionsShowcase() {
               </div>
             ) : null}
 
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5 text-sm leading-7 text-steel">
-              تم تنظيم مسار الاشتراكات ليكون جاهزًا للتوسعة لاحقًا نحو إدارة عضويات ومزايا أوسع، مع
-              الحفاظ الآن على تجربة آمنة وخفيفة داخل النسخة الحالية.
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-sm leading-7 text-steel">
+              تم تنظيم مسار الاشتراكات ليكون جاهزًا للتوسع لاحقًا نحو إدارة عضويات ومزايا أوسع، مع الحفاظ الآن
+              على تجربة آمنة وخفيفة داخل النسخة الحالية.
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/business-solutions"
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm font-semibold text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10"
+                className="btn-secondary flex-1"
               >
                 حلول الشركات
                 <Sparkles className="size-4" />
               </Link>
               <Link
                 href="/contact"
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm font-semibold text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10"
+                className="btn-secondary flex-1"
               >
                 تواصل معنا
               </Link>

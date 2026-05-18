@@ -10,30 +10,30 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        midnight: "#050816",
-        slatecore: "#0b1326",
-        cyber: "#4cc9f0",
-        cyanGlow: "#7ee7ff",
-        steel: "#93a4bf",
-        panel: "#101a33",
-        panelSoft: "#131f3d",
-        aurora: "#13345e",
-        success: "#5fe1a6",
-        warning: "#f2c14e",
-        danger: "#ff6b81",
+        midnight: "#06101E",
+        slatecore: "#0B1628",
+        cyber: "#0EA5E9",
+        cyanGlow: "#38BDF8",
+        steel: "#94A3B8",
+        panel: "#0F1C33",
+        panelSoft: "#14223D",
+        aurora: "#102540",
+        success: "#34D399",
+        warning: "#F59E0B",
+        danger: "#F87171",
       },
       boxShadow: {
-        glow: "0 0 0 1px rgba(126, 231, 255, 0.18), 0 20px 80px rgba(8, 24, 54, 0.45)",
-        panel: "0 24px 72px rgba(2, 8, 23, 0.4)",
-        focus: "0 0 0 3px rgba(126, 231, 255, 0.18)",
+        glow: "0 0 0 1px rgba(56, 189, 248, 0.16), 0 18px 42px rgba(6, 16, 30, 0.24)",
+        panel: "0 18px 44px rgba(2, 8, 23, 0.26)",
+        focus: "0 0 0 3px rgba(56, 189, 248, 0.18)",
       },
       backgroundImage: {
         grid:
-          "linear-gradient(rgba(126, 231, 255, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(126, 231, 255, 0.08) 1px, transparent 1px)",
+          "linear-gradient(rgba(148,163,184,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.04) 1px, transparent 1px)",
         radial:
-          "radial-gradient(circle at top, rgba(76, 201, 240, 0.16), transparent 32%), radial-gradient(circle at 80% 20%, rgba(126, 231, 255, 0.12), transparent 24%)",
+          "radial-gradient(circle at top, rgba(56,189,248,0.14), transparent 32%), radial-gradient(circle at 82% 18%, rgba(14,165,233,0.08), transparent 24%)",
         aurora:
-          "linear-gradient(135deg, rgba(126,231,255,0.22), rgba(17,34,62,0.1) 38%, rgba(76,201,240,0.08) 68%, rgba(255,255,255,0.03))",
+          "linear-gradient(135deg, rgba(56,189,248,0.16), rgba(11,22,40,0.06) 38%, rgba(14,165,233,0.08) 68%, rgba(255,255,255,0.02))",
       },
       animation: {
         "float-soft": "floatSoft 7s ease-in-out infinite",
@@ -44,19 +44,19 @@ const config: Config = {
       keyframes: {
         floatSoft: {
           "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-10px)" },
+          "50%": { transform: "translateY(-8px)" },
         },
         shimmer: {
           "0%": { backgroundPosition: "0% 50%" },
           "100%": { backgroundPosition: "100% 50%" },
         },
         fadeUp: {
-          "0%": { opacity: "0", transform: "translateY(18px)" },
+          "0%": { opacity: "0", transform: "translateY(14px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         pulseSoft: {
-          "0%, 100%": { opacity: "0.72", transform: "scale(1)" },
-          "50%": { opacity: "1", transform: "scale(1.06)" },
+          "0%, 100%": { opacity: "0.82", transform: "scale(1)" },
+          "50%": { opacity: "1", transform: "scale(1.03)" },
         },
       },
       fontFamily: {

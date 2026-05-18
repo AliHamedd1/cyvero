@@ -21,42 +21,48 @@ function isValidQuoteSummary(value: Partial<BusinessQuoteSummary> | undefined) {
 }
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as Partial<SalesLead>;
+  try {
+    const payload = (await request.json()) as Partial<SalesLead>;
 
-  if (!payload.fullName || payload.fullName.trim().length < 4) {
-    return NextResponse.json({ error: "يرجى إدخال الاسم الكامل." }, { status: 400 });
+    if (!payload.fullName || payload.fullName.trim().length < 4) {
+      return NextResponse.json({ error: "يرجى إدخال الاسم الكامل." }, { status: 400 });
+    }
+
+    if (!isValidEmail(payload.email ?? "")) {
+      return NextResponse.json({ error: "يرجى إدخال بريد إلكتروني صالح." }, { status: 400 });
+    }
+
+    if (!payload.companyName || payload.companyName.trim().length < 2) {
+      return NextResponse.json({ error: "يرجى إدخال اسم الشركة." }, { status: 400 });
+    }
+
+    if (!isValidPhone(payload.phone ?? "")) {
+      return NextResponse.json({ error: "يرجى إدخال رقم جوال صالح." }, { status: 400 });
+    }
+
+    if (!isValidQuoteSummary(payload.quoteSummary)) {
+      return NextResponse.json({ error: "بيانات التسعير المنقولة غير مكتملة." }, { status: 400 });
+    }
+
+    const leads = await readRuntimeCollection<SalesLead[]>(runtimeFiles.salesLeads, []);
+    const email = payload.email!.trim();
+    const phone = payload.phone!.trim();
+    const lead: SalesLead = {
+      id: crypto.randomUUID(),
+      reference: createPrototypeReference("SAL"),
+      fullName: payload.fullName.trim(),
+      email,
+      companyName: payload.companyName.trim(),
+      phone,
+      notes: payload.notes?.trim() ?? "",
+      submittedAt: new Date().toISOString(),
+      quoteSummary: payload.quoteSummary as BusinessQuoteSummary,
+    };
+
+    await writeRuntimeCollection(runtimeFiles.salesLeads, [lead, ...leads]);
+
+    return NextResponse.json({ lead }, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "تعذر إرسال الطلب إلى فريق المبيعات حاليًا." }, { status: 500 });
   }
-
-  if (!isValidEmail(payload.email ?? "")) {
-    return NextResponse.json({ error: "يرجى إدخال بريد إلكتروني صالح." }, { status: 400 });
-  }
-
-  if (!payload.companyName || payload.companyName.trim().length < 2) {
-    return NextResponse.json({ error: "يرجى إدخال اسم الشركة." }, { status: 400 });
-  }
-
-  if (!isValidPhone(payload.phone ?? "")) {
-    return NextResponse.json({ error: "يرجى إدخال رقم جوال صالح." }, { status: 400 });
-  }
-
-  if (!isValidQuoteSummary(payload.quoteSummary)) {
-    return NextResponse.json({ error: "بيانات التسعير المنقولة غير مكتملة." }, { status: 400 });
-  }
-
-  const leads = await readRuntimeCollection<SalesLead[]>(runtimeFiles.salesLeads, []);
-  const lead: SalesLead = {
-    id: crypto.randomUUID(),
-    reference: createPrototypeReference("SAL"),
-    fullName: payload.fullName.trim(),
-    email: payload.email!.trim(),
-    companyName: payload.companyName.trim(),
-    phone: payload.phone!.trim(),
-    notes: payload.notes?.trim() ?? "",
-    submittedAt: new Date().toISOString(),
-    quoteSummary: payload.quoteSummary as BusinessQuoteSummary,
-  };
-
-  await writeRuntimeCollection(runtimeFiles.salesLeads, [lead, ...leads]);
-
-  return NextResponse.json({ lead }, { status: 201 });
 }

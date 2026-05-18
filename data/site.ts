@@ -4,26 +4,26 @@ export const siteConfig = {
   name: "Cyvero",
   tagline: "منصة عربية للأمن السيبراني والحماية الرقمية",
   description:
-    "Cyvero منصة متخصصة في التوعية بالتهديدات السيبرانية، الوقاية، الاستجابة الأولية، وطلب المساعدة من مختصين بشكل قانوني وآمن.",
+    "Cyvero منصة سيبرانية عربية تجمع التوعية، التحليل الأولي، المختصين، الاشتراكات، وحلول الشركات ضمن تجربة دفاعية احترافية قابلة للتوسع.",
   url: "https://cyvero.local",
 };
 
 export const navigationLinks: NavigationLink[] = [
   { label: "الرئيسية", href: "/" },
   { label: "التهديدات", href: "/threats" },
-  { label: "حلّل حالتي", href: "/analyze" },
+  { label: "تحليل حالتي", href: "/analyze" },
   { label: "الاشتراكات", href: "/subscriptions" },
   { label: "المختصون", href: "/specialists", matchMode: "exact" },
   { label: "حلول الشركات", href: "/subscriptions/business", matchMode: "exact" },
-  { label: "الأدمن", href: "/admin-login", matchMode: "exact" },
   { label: "تواصل معنا", href: "/contact", matchMode: "exact" },
   { label: "من نحن", href: "/why-cyvero", matchMode: "exact" },
+  { label: "الأدمن", href: "/admin-login", matchMode: "exact" },
 ];
 
 export const footerPlatformLinks: NavigationLink[] = [
   { label: "الرئيسية", href: "/" },
   { label: "التهديدات", href: "/threats" },
-  { label: "حلّل حالتي", href: "/analyze" },
+  { label: "تحليل حالتي", href: "/analyze" },
   { label: "الاشتراكات", href: "/subscriptions" },
   { label: "المختصون", href: "/specialists" },
   { label: "حلول الشركات", href: "/subscriptions/business" },
@@ -32,6 +32,7 @@ export const footerPlatformLinks: NavigationLink[] = [
 export const companyLinks: NavigationLink[] = [
   { label: "من نحن", href: "/why-cyvero" },
   { label: "تواصل معنا", href: "/contact" },
+  { label: "لوحة الأدمن", href: "/admin-login" },
 ];
 
 export const socialLinks = [
@@ -62,8 +63,8 @@ export const footerLinkGroups: FooterLinkGroup[] = [
 ];
 
 export const featuredMetrics = [
-  { label: "تصنيف أمني", value: "10+" },
-  { label: "تهديد دفاعي", value: "90+" },
-  { label: "مؤشر تحذيري", value: "260+" },
-  { label: "سيناريو تحليل أولي", value: "120+" },
+  { label: "مسارات تشغيل دفاعية", value: "8" },
+  { label: "تهديدات وتوعية منظمة", value: "90+" },
+  { label: "مختصون واستشارات", value: "11" },
+  { label: "فرص نمو ومنتجات", value: "4" },
 ];

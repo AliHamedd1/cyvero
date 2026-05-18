@@ -4,11 +4,7 @@ import { AlertCircle, KeyRound, ShieldCheck, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import {
-  ADMIN_PASSWORD,
-  ADMIN_SESSION_KEY,
-  ADMIN_USERNAME,
-} from "@/lib/prototype";
+import { ADMIN_PASSWORD, ADMIN_SESSION_KEY, ADMIN_USERNAME } from "@/lib/prototype";
 
 const emptyFormState = {
   username: "",
@@ -29,10 +25,7 @@ export function AdminLoginForm() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (
-      formState.username === ADMIN_USERNAME &&
-      formState.password === ADMIN_PASSWORD
-    ) {
+    if (formState.username === ADMIN_USERNAME && formState.password === ADMIN_PASSWORD) {
       window.sessionStorage.setItem(ADMIN_SESSION_KEY, "authenticated");
       setError("");
       router.push("/admin/dashboard");
@@ -42,23 +35,20 @@ export function AdminLoginForm() {
     setError("بيانات الدخول غير صحيحة. يرجى التحقق من اسم المستخدم وكلمة المرور.");
   }
 
-  const controlClassName =
-    "w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8";
+  const controlClassName = "control-field";
 
   return (
     <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
       <div className="panel-soft cyber-card p-6 md:p-8">
         <div className="space-y-4">
-          <div className="inline-flex rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-4 py-2 text-sm text-cyanGlow">
-            وضع تجريبي
-          </div>
-          <h3 className="font-heading text-3xl text-white">دخول أدمن داخل الواجهة فقط</h3>
+          <div className="eyebrow">وضع تجريبي</div>
+          <h3 className="font-heading text-3xl text-white">دخول الأدمن داخل الواجهة فقط</h3>
           <p className="leading-8 text-steel">
-            هذه النسخة لا تحتوي على نظام Backend أو جلسات مصادقة حقيقية. التحقق الحالي محلي وتجريبي
-            فقط بهدف معاينة لوحة الأدمن التي تعرض الطلبات والبلاغات.
+            هذه النسخة لا تحتوي على نظام Backend أو جلسات مصادقة حقيقية. التحقق الحالي محلي وتجريبي فقط بهدف معاينة
+            لوحة الأدمن التي تعرض الطلبات والبلاغات.
           </p>
 
-          <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5 text-sm leading-7 text-steel">
+          <div className="surface-note">
             <p className="font-semibold text-white">بيانات الاختبار</p>
             <p className="mt-3">
               اسم المستخدم: <span className="text-cyanGlow">{ADMIN_USERNAME}</span>
@@ -72,7 +62,7 @@ export function AdminLoginForm() {
 
       <form onSubmit={handleSubmit} className="panel cyber-card overflow-hidden p-6 md:p-8">
         <div className="space-y-5">
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-4 py-2 text-sm text-cyanGlow">
+          <div className="eyebrow inline-flex items-center gap-2">
             <ShieldCheck className="size-4" />
             Cyvero Admin Access
           </div>
@@ -88,9 +78,7 @@ export function AdminLoginForm() {
                 <UserRound className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-cyanGlow" />
                 <input
                   value={formState.username}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, username: event.target.value }))
-                  }
+                  onChange={(event) => setFormState((current) => ({ ...current, username: event.target.value }))}
                   className={`${controlClassName} pr-11`}
                   placeholder="Admin"
                 />
@@ -104,11 +92,9 @@ export function AdminLoginForm() {
                 <input
                   type="password"
                   value={formState.password}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, password: event.target.value }))
-                  }
+                  onChange={(event) => setFormState((current) => ({ ...current, password: event.target.value }))}
                   className={`${controlClassName} pr-11`}
-                  placeholder="Admil123"
+                  placeholder="A12345a"
                   dir="ltr"
                 />
               </div>
@@ -122,10 +108,7 @@ export function AdminLoginForm() {
             </div>
           ) : null}
 
-          <button
-            type="submit"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyanGlow px-5 py-4 text-sm font-bold text-slate-950 transition hover:bg-white"
-          >
+          <button type="submit" className="btn-primary w-full">
             دخول لوحة الطلبات
           </button>
         </div>

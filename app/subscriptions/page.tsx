@@ -10,7 +10,7 @@ import { siteConfig } from "@/data/site";
 export const metadata: Metadata = {
   title: `الاشتراكات | ${siteConfig.name}`,
   description:
-    "المدخل الرئيسي لاشتراكات Cyvero، ويشمل اشتراكات الأفراد وحلول الشركات ضمن تجربة عربية منظمة واحترافية.",
+    "المدخل الرئيسي لاشتراكات Cyvero 2.0 ويشمل باقات الأفراد وحلول الشركات ضمن تجربة عربية منظمة واحترافية.",
 };
 
 export default function SubscriptionsPage() {
@@ -23,13 +23,13 @@ export default function SubscriptionsPage() {
           <div className="space-y-5">
             <SectionHeading
               eyebrow="قسم الاشتراكات"
-              title="اشتراكات الأفراد وحلول الشركات من صفحة واحدة"
-              description="تم تنظيم هذا القسم ليكون واضحًا وسهل التوسعة: باقات فردية، حلول شركات، ونموذج اشتراك فعلي بدون ربط دفع حقيقي في هذه المرحلة."
+              title="اشتراكات أفراد وحلول شركات من صفحة واحدة"
+              description="تم تنظيم هذا القسم ليكون واضحًا وسهل التوسع: باقات فردية، حلول شركات، ونموذج اشتراك تجريبي فعلي بدون ربط دفع حقيقي."
             />
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4 text-sm leading-7 text-steel">
-                الاشتراكات هنا مهيأة للاستخدام الفعلي داخل النسخة الحالية، مع رسائل نجاح وأرقام اشتراك
-                تجريبية محفوظة داخل المنصة.
+                الاشتراكات هنا مهيأة للاستخدام الفعلي داخل النسخة الحالية، مع رسائل نجاح وأرقام اشتراك محفوظة
+                داخل المنصة.
               </div>
               <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4 text-sm leading-7 text-steel">
                 يمكنك أيضًا الانتقال إلى حاسبة حلول الشركات ونقل البيانات مباشرة إلى صفحة المبيعات.
@@ -45,8 +45,8 @@ export default function SubscriptionsPage() {
               باقات فردية وحلول شركات ضمن تجربة واحدة واضحة ومنظمة
             </p>
             <p className="mt-4 text-base leading-8 text-steel">
-              اختر المسار المناسب لك، ثم تابع إلى تفاصيل الباقات أو التسعير التقديري للشركات مع واجهات
-              تفاعلية مرتبطة ببعضها.
+              اختر المسار المناسب لك، ثم تابع إلى تفاصيل الباقات أو التسعير التقديري للشركات مع واجهات مترابطة
+              واحترافية.
             </p>
           </div>
         </div>
@@ -73,7 +73,7 @@ export default function SubscriptionsPage() {
         <SectionHeading
           eyebrow="اشتراك مباشر"
           title="أنشئ اشتراكك الآن من نفس الصفحة"
-          description="اختر الباقة المناسبة ثم أدخل بياناتك لإنشاء رقم اشتراك عشوائي مباشرة داخل المنصة."
+          description="اختر الباقة المناسبة ثم أدخل بياناتك لإنشاء رقم اشتراك عشوائي مباشر داخل المنصة."
         />
         <IndividualSubscriptionsShowcase />
       </section>
@@ -86,8 +86,8 @@ export default function SubscriptionsPage() {
           <div className="space-y-3">
             <h3 className="font-heading text-2xl text-white">جاهزية للتوسع مستقبلًا</h3>
             <p className="leading-8 text-steel">
-              تم تنظيم هذا القسم ليكون أساسًا لنظام اشتراكات أكثر تطورًا لاحقًا، يشمل إدارة الخطط
-              والمزايا ومستويات الخدمة للأفراد والمنشآت.
+              تم تنظيم هذا القسم ليكون أساسًا لنظام اشتراكات أكثر تطورًا لاحقًا يشمل إدارة الخطط والمزايا
+              ومستويات الخدمة للأفراد والمنشآت.
             </p>
           </div>
         </div>

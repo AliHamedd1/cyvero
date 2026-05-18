@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { formatCurrency, getCompanyTypeOption, readBusinessQuoteSummary } from "@/data/business";
+import { readApiPayload } from "@/lib/fetch";
 import { isValidEmail, isValidPhone } from "@/lib/prototype";
 
 const emptyFormState = {
@@ -18,23 +19,6 @@ const emptyFormState = {
 
 type SalesFormState = typeof emptyFormState;
 type SalesFormErrors = Partial<Record<keyof SalesFormState, string>>;
-
-async function parseApiResponse(response: Response) {
-  const payload = (await response.json()) as {
-    error?: string;
-    lead?: {
-      reference: string;
-      fullName: string;
-      companyName: string;
-    };
-  };
-
-  if (!response.ok) {
-    throw new Error(payload.error || "تعذر إرسال الطلب إلى فريق المبيعات.");
-  }
-
-  return payload;
-}
 
 export function SalesContactExperience() {
   const searchParams = useSearchParams();
@@ -107,7 +91,14 @@ export function SalesContactExperience() {
           quoteSummary,
         }),
       });
-      const payload = await parseApiResponse(response);
+      const payload = await readApiPayload<{
+        error?: string;
+        lead?: {
+          reference: string;
+          fullName: string;
+          companyName: string;
+        };
+      }>(response, "تعذر إرسال الطلب إلى فريق المبيعات.");
 
       setFormState(emptyFormState);
       setErrors({});
@@ -134,16 +125,16 @@ export function SalesContactExperience() {
             <MessageSquareText className="size-4" />
             تواصل مع فريق المبيعات
           </div>
-          <h3 className="font-heading text-3xl text-white">أرسل بياناتك وسيتواصل معك الفريق</h3>
+          <h3 className="font-heading text-3xl text-white">أرسل بياناتك وسيتم التواصل معك من داخل المسار التجريبي</h3>
           <p className="leading-8 text-steel">
-            سيتم إرسال ملخص الاحتياج القادم من حاسبة حلول الشركات مع بيانات التواصل، بحيث يحصل فريق
-            المبيعات على صورة أولية واضحة قبل المتابعة.
+            يتم نقل ملخص الشركة والسعر التقديري من حاسبة حلول الشركات إلى هذه الصفحة ثم إرفاقه مع نموذج
+            المبيعات بشكل تلقائي.
           </p>
 
-          <form onSubmit={handleSubmit} className="grid gap-4">
+          <form onSubmit={handleSubmit} className="grid gap-4" noValidate>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="grid gap-2 text-sm text-steel">
-                الاسم
+                الاسم الكامل
                 <input
                   value={formState.fullName}
                   onChange={(event) => setFieldValue("fullName", event.target.value)}
@@ -156,12 +147,14 @@ export function SalesContactExperience() {
               <label className="grid gap-2 text-sm text-steel">
                 البريد الإلكتروني
                 <input
-                  type="email"
+                  type="text"
+                  inputMode="email"
                   value={formState.email}
                   onChange={(event) => setFieldValue("email", event.target.value)}
                   className={controlClassName}
                   placeholder="name@company.com"
                   dir="ltr"
+                  autoComplete="email"
                 />
                 {errors.email ? <span className="text-xs text-danger">{errors.email}</span> : null}
               </label>
@@ -187,6 +180,8 @@ export function SalesContactExperience() {
                     className={`${controlClassName} pr-11`}
                     placeholder="+9665XXXXXXXX"
                     dir="ltr"
+                    inputMode="tel"
+                    autoComplete="tel"
                   />
                 </div>
                 {errors.phone ? <span className="text-xs text-danger">{errors.phone}</span> : null}
@@ -194,19 +189,19 @@ export function SalesContactExperience() {
             </div>
 
             <label className="grid gap-2 text-sm text-steel">
-              رسالة أو ملاحظات إضافية
+              ملاحظات إضافية
               <textarea
                 value={formState.notes}
                 onChange={(event) => setFieldValue("notes", event.target.value)}
                 rows={6}
                 className="w-full rounded-[1.5rem] border border-white/10 bg-white/5 px-4 py-4 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
-                placeholder="أضف ملاحظات تشغيلية أو متطلبات خاصة أو مواعيد مناسبة للتواصل"
+                placeholder="أضف ملاحظات تشغيلية أو متطلبات خاصة أو وقتًا مناسبًا للتواصل"
               />
             </label>
 
             <div className="rounded-[1.5rem] border border-cyanGlow/15 bg-cyanGlow/10 p-5 text-sm leading-7 text-steel">
-              الانتقال من الحاسبة إلى هذه الصفحة أصبح متصلًا فعليًا: يتم نقل عدد الأجهزة والسيرفرات
-              والتقدير السعري، ثم حفظ طلب المبيعات داخل المنصة.
+              تم ربط هذه الصفحة فعليًا مع حاسبة حلول الشركات، لذلك أي انتقال من الحاسبة يحمل نوع الشركة وعدد
+              الأجهزة وعدد السيرفرات والسعر التقديري إلى هنا مباشرة.
             </div>
 
             {serverError ? (
@@ -250,9 +245,9 @@ export function SalesContactExperience() {
                 <span className="text-sm font-semibold">تم إرسال الطلب بنجاح</span>
               </div>
               <p className="mt-4 text-sm leading-7 text-slate-100">
-                شكرًا <span className="font-semibold text-white">{successState.name}</span>، تم تسجيل طلب
-                <span className="font-semibold text-white"> {successState.companyName} </span>
-                داخل مسار المبيعات التجريبي.
+                شكرًا <span className="font-semibold text-white">{successState.name}</span>، تم تسجيل طلب{" "}
+                <span className="font-semibold text-white">{successState.companyName}</span> داخل مسار المبيعات
+                التجريبي.
               </p>
               <div className="mt-4 rounded-[1.35rem] border border-white/10 bg-midnight/50 p-4">
                 <p className="text-xs tracking-[0.16em] text-steel">رقم المتابعة</p>
@@ -292,9 +287,7 @@ export function SalesContactExperience() {
             </div>
             <div className="rounded-[1.35rem] border border-cyanGlow/15 bg-cyanGlow/10 p-4">
               <p className="text-sm text-cyanGlow">السعر التقديري النهائي</p>
-              <p className="mt-1 text-2xl font-bold text-white">
-                {formatCurrency(quoteSummary.estimatedPrice)}
-              </p>
+              <p className="mt-1 text-2xl font-bold text-white">{formatCurrency(quoteSummary.estimatedPrice)}</p>
             </div>
           </div>
 
@@ -304,8 +297,8 @@ export function SalesContactExperience() {
               <span className="font-semibold">كيف تُستخدم هذه البيانات</span>
             </div>
             <p className="mt-3">
-              يعتمد فريق المبيعات على نوع الشركة، وعدد الأجهزة، وعدد السيرفرات، والسعر التقديري لتجهيز
-              متابعة أكثر دقة وملاءمة لاحتياج الجهة.
+              يعتمد فريق المبيعات على نوع الشركة وعدد الأجهزة وعدد السيرفرات والسعر التقديري لتجهيز متابعة
+              أكثر دقة وملاءمة.
             </p>
           </div>
         </div>

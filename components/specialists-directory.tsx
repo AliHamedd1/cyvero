@@ -17,6 +17,7 @@ import {
   UserCheck,
   XCircle,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { specialists } from "@/data/specialists";
@@ -32,6 +33,7 @@ import {
   SpecialistCancellationReason,
   SpecialistConversation,
   SpecialistConversationStatus,
+  SpecialistTrack,
   SpecialistConversationUrgency,
   SpecialistProfile,
   SpecialistRating,
@@ -43,6 +45,17 @@ const specialtyOptions = [
     value: specialty,
     label: specialty,
   })),
+];
+
+const specialtyFilterOptions: Array<{ value: "all" | SpecialistTrack; label: string }> = [
+  { value: "all", label: "كل التخصصات" },
+  { value: "networks", label: "شبكات" },
+  { value: "accounts", label: "حسابات" },
+  { value: "malware", label: "برمجيات خبيثة" },
+  { value: "email", label: "بريد إلكتروني" },
+  { value: "mobile", label: "جوال" },
+  { value: "systems", label: "أنظمة" },
+  { value: "unclassified", label: "حالات غير مصنفة" },
 ];
 
 const urgencyOptions: Array<{
@@ -182,6 +195,7 @@ function canOpenNewRequest(conversation: SpecialistConversation | null) {
 }
 
 export function SpecialistsDirectory() {
+  const searchParams = useSearchParams();
   const requestSectionRef = useRef<HTMLElement | null>(null);
   const [search, setSearch] = useState("");
   const [specialtyFilter, setSpecialtyFilter] = useState("all");
@@ -211,9 +225,24 @@ export function SpecialistsDirectory() {
   const selectedSpecialist = specialists.find((specialist) => specialist.id === selectedId) ?? null;
   const normalizedSearch = normalizeArabicText(search);
 
+  useEffect(() => {
+    const requestedSpecialist = searchParams.get("specialist");
+    const matchedSpecialist = specialists.find((specialist) => specialist.id === requestedSpecialist);
+
+    if (matchedSpecialist) {
+      setSelectedId(matchedSpecialist.id);
+    }
+
+    const requestedSearch = searchParams.get("search");
+
+    if (requestedSearch) {
+      setSearch(requestedSearch);
+    }
+  }, [searchParams]);
+
   const filteredSpecialists = useMemo(() => {
     return specialists.filter((specialist) => {
-      const matchesSpecialty = specialtyFilter === "all" || specialist.primarySpecialty === specialtyFilter;
+      const matchesSpecialty = specialtyFilter === "all" || specialist.specialtyTrack === specialtyFilter;
 
       if (!matchesSpecialty) {
         return false;
@@ -718,7 +747,7 @@ export function SpecialistsDirectory() {
               onChange={(event) => setSpecialtyFilter(event.target.value)}
               className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3.5 text-white outline-none transition focus:border-cyanGlow/35 focus:bg-white/8"
             >
-              {specialtyOptions.map((option) => (
+              {specialtyFilterOptions.map((option) => (
                 <option key={option.value} value={option.value} className="bg-slatecore text-white">
                   {option.label}
                 </option>
@@ -786,6 +815,23 @@ export function SpecialistsDirectory() {
                   </div>
                 </div>
 
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs text-steel">السعر المبدئي</p>
+                    <p className="mt-1 text-sm text-white">{specialist.starterPrice} ريال</p>
+                  </div>
+                  <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs text-steel">مدة التنفيذ</p>
+                    <p className="mt-1 text-sm text-white">{specialist.averageDeliveryDays} يوم</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-[1.25rem] border border-white/10 bg-white/5 p-4 text-sm text-steel">
+                  المدينة: <span className="text-white">{specialist.city}</span>
+                  <span className="mx-2 text-white/30">•</span>
+                  سرعة الاستجابة: <span className="text-white">{specialist.responseTime}</span>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => handleSelectSpecialist(specialist)}
@@ -816,6 +862,21 @@ export function SpecialistsDirectory() {
                   </p>
                 </div>
                 <p className="leading-8 text-steel">{selectedSpecialist.description}</p>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs text-steel">السعر المبدئي</p>
+                    <p className="mt-1 text-white">{selectedSpecialist.starterPrice} ريال</p>
+                  </div>
+                  <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs text-steel">مدة التنفيذ</p>
+                    <p className="mt-1 text-white">{selectedSpecialist.averageDeliveryDays} يوم</p>
+                  </div>
+                  <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs text-steel">سرعة الاستجابة</p>
+                    <p className="mt-1 text-white">{selectedSpecialist.responseTime}</p>
+                  </div>
+                </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4">
@@ -1130,7 +1191,7 @@ export function SpecialistsDirectory() {
                 </section>
 
                 {activeConversation.status !== "closed" && activeConversation.status !== "cancelled" ? (
-                  <form onSubmit={sendClientMessage} className="panel cyber-card overflow-hidden p-6">
+                  <form onSubmit={sendClientMessage} className="panel cyber-card overflow-hidden p-6" noValidate>
                     <div className="space-y-4">
                       <div>
                         <p className="font-semibold text-white">رسالة إلى المختص</p>
@@ -1164,7 +1225,7 @@ export function SpecialistsDirectory() {
                 ) : null}
 
                 {activeConversation.status === "closed" ? (
-                  <form onSubmit={submitRating} className="panel cyber-card overflow-hidden p-6">
+                  <form onSubmit={submitRating} className="panel cyber-card overflow-hidden p-6" noValidate>
                     <div className="space-y-5">
                       <div className="flex items-center gap-2 text-cyanGlow">
                         <BadgeCheck className="size-4" />
@@ -1267,7 +1328,7 @@ export function SpecialistsDirectory() {
                 ) : null}
               </>
             ) : (
-              <form onSubmit={submitRequest} className="panel cyber-card overflow-hidden p-6 md:p-8">
+              <form onSubmit={submitRequest} className="panel cyber-card overflow-hidden p-6 md:p-8" noValidate>
                 <div className="space-y-5">
                   <div className="inline-flex items-center gap-2 rounded-full border border-cyanGlow/20 bg-cyanGlow/10 px-4 py-2 text-sm text-cyanGlow">
                     <ShieldCheck className="size-4" />

@@ -4,9 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Search, Sparkles, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { categories } from "@/data/categories";
-import { threats } from "@/data/threats";
-import { matchesCategoryQuery, matchesThreatQuery } from "@/lib/search";
+import { getSearchResults, SearchResultItem } from "@/lib/site-search";
 import { cn } from "@/lib/utils";
 
 interface SearchBarProps {
@@ -14,6 +12,42 @@ interface SearchBarProps {
   defaultValue?: string;
   placeholder: string;
   compact?: boolean;
+}
+
+type SearchSection = {
+  title: string;
+  items: SearchResultItem[];
+};
+
+function SearchResultsGroup({
+  title,
+  items,
+  navigateTo,
+}: SearchSection & {
+  navigateTo: (href: string) => void;
+}) {
+  if (!items.length) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold tracking-[0.14em] text-cyanGlow">{title}</p>
+      {items.map((item) => (
+        <button
+          key={`${item.kind}-${item.id}`}
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => navigateTo(item.href)}
+          className="block w-full rounded-[1.1rem] border border-white/10 bg-white/[0.04] px-4 py-3 text-right text-sm text-white hover:border-cyanGlow/25 hover:bg-cyanGlow/10"
+        >
+          <p className="font-semibold">{item.title}</p>
+          <p className="mt-1 text-xs text-cyanGlow">{item.subtitle}</p>
+          <p className="mt-2 line-clamp-2 text-xs leading-6 text-steel">{item.description}</p>
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export function SearchBar({
@@ -31,22 +65,14 @@ export function SearchBar({
   }, [defaultValue]);
 
   const query = value.trim();
-
-  const results = useMemo(() => {
-    if (!query) {
-      return {
-        categories: [],
-        threats: [],
-      };
-    }
-
-    return {
-      categories: categories.filter((category) => matchesCategoryQuery(category, query)).slice(0, 4),
-      threats: threats.filter((threat) => matchesThreatQuery(threat, query)).slice(0, 6),
-    };
-  }, [query]);
-
-  const hasResults = results.categories.length > 0 || results.threats.length > 0;
+  const results = useMemo(() => getSearchResults(query), [query]);
+  const sections: SearchSection[] = [
+    { title: "التهديدات", items: results.threats.slice(0, 4) },
+    { title: "التصنيفات", items: results.categories.slice(0, 3) },
+    { title: "المختصون", items: results.specialists.slice(0, 3) },
+    { title: "الاشتراكات والحلول", items: [...results.subscriptions.slice(0, 3), ...results.business] },
+  ];
+  const hasResults = results.total > 0;
   const showResults = focused && query.length > 0;
 
   function navigateTo(href: string) {
@@ -62,12 +88,13 @@ export function SearchBar({
   return (
     <form
       role="search"
-      aria-label="بحث في Cyvero"
+      aria-label="البحث في Cyvero"
       onSubmit={onSubmit}
       className={cn(
-        "group relative flex items-center gap-3 rounded-[1.4rem] border border-white/10 bg-white/5 px-4 backdrop-blur-xl",
+        "group relative flex items-center gap-3 rounded-[1.25rem] border border-white/10 bg-slatecore/75 px-4 shadow-panel backdrop-blur-md",
         compact ? "py-2.5" : "py-3.5",
       )}
+      noValidate
     >
       <Search className="size-4 text-cyanGlow" aria-hidden="true" />
       <input
@@ -95,16 +122,20 @@ export function SearchBar({
       ) : null}
       <button
         type="submit"
-        className="inline-flex items-center gap-2 rounded-xl bg-cyanGlow px-4 py-2 text-xs font-bold text-slate-950 transition hover:bg-white"
+        className={cn(
+          "inline-flex items-center gap-2 rounded-xl bg-cyanGlow px-4 font-semibold text-slate-950 shadow-glow",
+          compact ? "py-2 text-xs" : "py-2.5 text-xs",
+          "hover:bg-cyber hover:text-white",
+        )}
       >
         <Sparkles className="size-3.5" />
         بحث
       </button>
 
       {showResults ? (
-        <div className="absolute inset-x-0 top-full z-40 mt-3 rounded-[1.5rem] border border-white/10 bg-slatecore/95 p-4 shadow-panel backdrop-blur-2xl">
+        <div className="absolute inset-x-0 top-full z-40 mt-3 rounded-[1.35rem] border border-white/10 bg-slatecore/95 p-4 shadow-panel backdrop-blur-md">
           <div className="mb-3 flex items-center justify-between gap-3 text-xs text-steel">
-            <span>نتائج مباشرة للبحث عن: {query}</span>
+            <span>نتائج مباشرة عن: {query}</span>
             <button
               type="button"
               onMouseDown={(event) => event.preventDefault()}
@@ -116,54 +147,18 @@ export function SearchBar({
           </div>
 
           {hasResults ? (
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold tracking-[0.16em] text-cyanGlow">التصنيفات</p>
-                {results.categories.length > 0 ? (
-                  results.categories.map((category) => (
-                    <button
-                      key={category.slug}
-                      type="button"
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => navigateTo(`/categories/${category.slug}`)}
-                      className="block w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right text-sm text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10"
-                    >
-                      <p className="font-semibold">{category.name}</p>
-                      <p className="mt-1 line-clamp-2 text-xs leading-6 text-steel">{category.shortDescription}</p>
-                    </button>
-                  ))
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-3 text-sm text-steel">
-                    لا توجد تصنيفات مطابقة
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-xs font-semibold tracking-[0.16em] text-cyanGlow">التهديدات</p>
-                {results.threats.length > 0 ? (
-                  results.threats.map((threat) => (
-                    <button
-                      key={threat.slug}
-                      type="button"
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => navigateTo(`/threats/${threat.slug}`)}
-                      className="block w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right text-sm text-white transition hover:border-cyanGlow/20 hover:bg-cyanGlow/10"
-                    >
-                      <p className="font-semibold">{threat.name}</p>
-                      <p className="mt-1 text-xs text-cyanGlow">{threat.category}</p>
-                      <p className="mt-1 line-clamp-2 text-xs leading-6 text-steel">{threat.shortDescription}</p>
-                    </button>
-                  ))
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-3 text-sm text-steel">
-                    لا توجد تهديدات مطابقة
-                  </div>
-                )}
-              </div>
+            <div className="grid gap-4 xl:grid-cols-2">
+              {sections.map((section) => (
+                <SearchResultsGroup
+                  key={section.title}
+                  title={section.title}
+                  items={section.items}
+                  navigateTo={navigateTo}
+                />
+              ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-6 text-center text-sm text-steel">
+            <div className="rounded-[1.1rem] border border-dashed border-white/10 bg-white/[0.04] px-4 py-6 text-center text-sm text-steel">
               لا توجد نتائج مطابقة حاليًا
             </div>
           )}

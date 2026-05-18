@@ -12,98 +12,105 @@ function sortRatings(ratings: SpecialistRating[]) {
 }
 
 export async function GET(request: NextRequest) {
-  const specialistId = request.nextUrl.searchParams.get("specialistId");
-  const ratings = await readRuntimeCollection<SpecialistRating[]>(runtimeFiles.specialistRatings, []);
+  try {
+    const specialistId = request.nextUrl.searchParams.get("specialistId");
+    const ratings = await readRuntimeCollection<SpecialistRating[]>(runtimeFiles.specialistRatings, []);
 
-  if (specialistId) {
-    return NextResponse.json({
-      ratings: sortRatings(ratings.filter((rating) => rating.specialistId === specialistId)),
-    });
+    if (specialistId) {
+      return NextResponse.json({
+        ratings: sortRatings(ratings.filter((rating) => rating.specialistId === specialistId)),
+      });
+    }
+
+    return NextResponse.json({ ratings: sortRatings(ratings) });
+  } catch {
+    return NextResponse.json({ error: "تعذر تحميل تقييمات المختصين حاليًا." }, { status: 500 });
   }
-
-  return NextResponse.json({ ratings: sortRatings(ratings) });
 }
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as Partial<SpecialistRating>;
-  const specialist = specialists.find((item) => item.id === payload.specialistId);
+  try {
+    const payload = (await request.json()) as Partial<SpecialistRating>;
+    const specialist = specialists.find((item) => item.id === payload.specialistId);
 
-  if (!specialist) {
-    return NextResponse.json({ error: "المختص المطلوب غير متاح." }, { status: 400 });
-  }
+    if (!specialist) {
+      return NextResponse.json({ error: "المختص المطلوب غير متاح." }, { status: 400 });
+    }
 
-  if (!payload.clientName || payload.clientName.trim().length < 3) {
-    return NextResponse.json({ error: "يرجى كتابة اسم صاحب التقييم." }, { status: 400 });
-  }
+    if (!payload.clientName || payload.clientName.trim().length < 3) {
+      return NextResponse.json({ error: "يرجى كتابة اسم صاحب التقييم." }, { status: 400 });
+    }
 
-  if (!payload.reference || payload.reference.trim().length < 6) {
-    return NextResponse.json({ error: "يرجى إدخال مرجع المحادثة." }, { status: 400 });
-  }
+    if (!payload.reference || payload.reference.trim().length < 6) {
+      return NextResponse.json({ error: "يرجى إدخال مرجع المحادثة." }, { status: 400 });
+    }
 
-  if (!payload.serviceArea || payload.serviceArea.trim().length < 3) {
-    return NextResponse.json({ error: "يرجى تحديد نوع الخدمة أو المشكلة." }, { status: 400 });
-  }
+    if (!payload.serviceArea || payload.serviceArea.trim().length < 3) {
+      return NextResponse.json({ error: "يرجى تحديد نوع الخدمة أو المشكلة." }, { status: 400 });
+    }
 
-  if (!payload.comment || payload.comment.trim().length < 15) {
-    return NextResponse.json({ error: "يرجى كتابة تقييم أكثر تفصيلًا." }, { status: 400 });
-  }
+    if (!payload.comment || payload.comment.trim().length < 15) {
+      return NextResponse.json({ error: "يرجى كتابة تقييم أكثر تفصيلًا." }, { status: 400 });
+    }
 
-  if (!payload.rating || payload.rating < 1 || payload.rating > 5) {
-    return NextResponse.json({ error: "يرجى اختيار تقييم من 1 إلى 5." }, { status: 400 });
-  }
+    if (!payload.rating || payload.rating < 1 || payload.rating > 5) {
+      return NextResponse.json({ error: "يرجى اختيار تقييم من 1 إلى 5." }, { status: 400 });
+    }
 
-  const conversations = await readRuntimeCollection<SpecialistConversation[]>(
-    runtimeFiles.specialistConversations,
-    [],
-  );
-  const matchingConversation = conversations.find(
-    (item) =>
-      item.reference.toUpperCase() === payload.reference?.trim().toUpperCase() &&
-      item.specialistId === specialist.id,
-  );
-
-  if (!matchingConversation) {
-    return NextResponse.json(
-      { error: "لا يمكن تقييم المختص إلا باستخدام مرجع محادثة صحيح مرتبط به." },
-      { status: 400 },
+    const conversations = await readRuntimeCollection<SpecialistConversation[]>(
+      runtimeFiles.specialistConversations,
+      [],
     );
-  }
-
-  if (matchingConversation.status !== "closed") {
-    return NextResponse.json(
-      { error: "يمكن إرسال التقييم بعد انتهاء الطلب وإغلاقه فقط." },
-      { status: 409 },
+    const matchingConversation = conversations.find(
+      (item) =>
+        item.reference.toUpperCase() === payload.reference?.trim().toUpperCase() &&
+        item.specialistId === specialist.id,
     );
-  }
 
-  const ratings = await readRuntimeCollection<SpecialistRating[]>(runtimeFiles.specialistRatings, []);
-  const duplicateRating = ratings.find(
-    (item) =>
-      item.specialistId === specialist.id &&
-      item.reference.toUpperCase() === payload.reference?.trim().toUpperCase(),
-  );
+    if (!matchingConversation) {
+      return NextResponse.json(
+        { error: "لا يمكن تقييم المختص إلا باستخدام مرجع محادثة صحيح مرتبط به." },
+        { status: 400 },
+      );
+    }
 
-  if (duplicateRating) {
-    return NextResponse.json(
-      { error: "تم إرسال تقييم لهذا المرجع مسبقًا، ولا يمكن تكراره في هذه النسخة." },
-      { status: 409 },
+    if (matchingConversation.status !== "closed") {
+      return NextResponse.json(
+        { error: "يمكن إرسال التقييم بعد انتهاء الطلب وإغلاقه فقط." },
+        { status: 409 },
+      );
+    }
+
+    const ratings = await readRuntimeCollection<SpecialistRating[]>(runtimeFiles.specialistRatings, []);
+    const duplicateRating = ratings.find(
+      (item) =>
+        item.specialistId === specialist.id &&
+        item.reference.toUpperCase() === payload.reference?.trim().toUpperCase(),
     );
+
+    if (duplicateRating) {
+      return NextResponse.json(
+        { error: "تم إرسال تقييم لهذا المرجع مسبقًا، ولا يمكن تكراره في هذه النسخة." },
+        { status: 409 },
+      );
+    }
+
+    const rating: SpecialistRating = {
+      id: crypto.randomUUID(),
+      specialistId: specialist.id,
+      specialistName: specialist.name,
+      clientName: payload.clientName.trim(),
+      reference: payload.reference.trim().toUpperCase(),
+      serviceArea: payload.serviceArea.trim(),
+      rating: payload.rating,
+      comment: payload.comment.trim(),
+      submittedAt: new Date().toISOString(),
+    };
+
+    await writeRuntimeCollection(runtimeFiles.specialistRatings, [rating, ...ratings]);
+
+    return NextResponse.json({ rating }, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "تعذر إرسال تقييم المختص حاليًا." }, { status: 500 });
   }
-
-  const rating: SpecialistRating = {
-    id: crypto.randomUUID(),
-    specialistId: specialist.id,
-    specialistName: specialist.name,
-    clientName: payload.clientName.trim(),
-    reference: payload.reference.trim().toUpperCase(),
-    serviceArea: payload.serviceArea.trim(),
-    rating: payload.rating,
-    comment: payload.comment.trim(),
-    submittedAt: new Date().toISOString(),
-  };
-
-  const nextRatings = [rating, ...ratings];
-  await writeRuntimeCollection(runtimeFiles.specialistRatings, nextRatings);
-
-  return NextResponse.json({ rating }, { status: 201 });
 }
